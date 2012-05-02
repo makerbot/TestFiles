@@ -10,29 +10,51 @@ from pysvg.builders import StyleBuilder
 
 layer_begin = re.compile('^\((<layer>|Slice) [\d.]+.*\)$')
 gcode_move = re.compile('G1 (X(-?\d+\.?\d*))? (Y(-?\d+\.?\d*))? (Z(-?\d+\.?\d*))? (F(\d+\.?\d*))?')
-#gcode_command = re.compile('([A-Z]\d+) ')
+gcode_command_code = re.compile('([A-Z]\d+)(\s|$)')
 
 gcode_file = sys.argv[1]
 dump_dir = sys.argv[2]
 factor = int(sys.argv[3])
-#extruder_mode = int(sys.argv[4])
+extruder_mode = int(sys.argv[4])
 
 min_x = 0
 min_y = 0
 
-
 def layer_filename(layer_num):
     return dump_dir+'/layer_'+str(layer_num)+'.svg'
 
+
+(MOVE, EXTRUDE) = range(2)
+    
+def code_from_line(gcode_line):
+    match = gcode_command_code.match(gcode_line)
+
+    if match is None: return None
+    else: return match.group(1)
+        
+
+def line_type(gcode_line):
+    code = code_from_line(gcode_line)
+
+    if code == "G1":
+        return MOVE
+    if code in ("M101", "M102", "M103", "M108"):
+        return EXTRUDE
+    elif code is None:
+        print "Not a code line: ["+ gcode_line + "]"
+    else:
+        print "unknown code: " + code
+        return None
+
 def parse_G1_line(gcode_line):
     match = gcode_move.match(gcode_line)
-
+    
     if match is None:
-#        print "skipped line: " + gcode_line
         return None
 
     return [float(match.group(2)), float(match.group(4)),
             float(match.group(6)), float(match.group(8))]
+
 
 class Coord(object):
     def __init__(self, x=0, y=0, z=0):
@@ -85,6 +107,42 @@ class Position(Coord):
         return self.move(Coord(values[0], values[1], values[2]),
                          values[3])
 
+class Extruder(object):
+    extrude_style = StyleBuilder()
+    extrude_style.setStrokeWidth(.3 * factor)
+    extrude_style.setStroke('red')
+
+    move_style = StyleBuilder()
+    move_style.setStrokeWidth(.3 * factor)
+    move_style.setStroke('blue')
+
+    def __init__(self):
+        self.extruding = False
+
+    def isExtruding(self):
+        return self.extruding
+
+    def from_gcode(self, gcode_line):
+        code = code_from_line(gcode_line)
+        if code in ("M102", "M103"):
+            print "Switching off extruder"
+            self.extruding = False
+        elif code == "M101":
+            print "Switching on extruder"
+            self.extruding = True
+        else:
+            print "Unknown code: " + code
+            
+
+    def getStyle(self):
+        if self.extruding:
+            print "extrude"
+            return self.extrude_style
+        else:
+            print "move"
+            return self.move_style
+        
+
 ################################################################################
 
 gcode_fh = open(gcode_file, "r")
@@ -109,20 +167,20 @@ cur = Position()
 out = None
 layer_num = None
 
-extrude_style = StyleBuilder()
-extrude_style.setStrokeWidth(.3 * factor)
-extrude_style.setStroke('red')
 
-move_style = StyleBuilder()
-move_style.setStrokeWidth(.3 * factor)
-move_style.setStroke('blue')
+extruder = Extruder()
 
 for gcode_line in gcode_fh.readlines():
     gcode_line = gcode_line.rstrip()
 
-    command = gcode_command(gcode_line)
+    command = line_type(gcode_line)
 
-    movement = cur.gcode_move(gcode_line)
+    movement = None
+    if command == EXTRUDE:
+        print "Extrude line: " + gcode_line
+        extruder.from_gcode(gcode_line)
+    elif command == MOVE:
+        movement = cur.gcode_move(gcode_line)
 
     #don't treat anything as real until we see the first layer marker
     if layer_num is None:
@@ -142,7 +200,7 @@ for gcode_line in gcode_fh.readlines():
         layer_num += 1
         out = svg("Layer "+str(layer_num))
     else:
-        myline = movement.toSVG(extrude_style)
+        myline = movement.toSVG(extruder.getStyle())
         if myline is None:
             raise Exception("line is being returned as None")
         out.addElement(myline)
