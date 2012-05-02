@@ -24,36 +24,34 @@ def layer_filename(layer_num):
     return dump_dir+'/layer_'+str(layer_num)+'.svg'
 
 
-(MOVE, EXTRUDE) = range(2)
+class GCode(object):
+    (MOVE, EXTRUDE) = range(2)
     
-def code_from_line(gcode_line):
-    match = gcode_command_code.match(gcode_line)
+    @staticmethod
+    def code_from_line(gcode_line):
+        match = gcode_command_code.match(gcode_line)
 
-    if match is None: return None
-    else: return match.group(1)
+        if match is None: return None
+        else: return match.group(1)
         
+    @staticmethod
+    def line_type(gcode_line):
+        code = GCode.code_from_line(gcode_line)
 
-def line_type(gcode_line):
-    code = code_from_line(gcode_line)
+        if code == "G1":
+            return GCode.MOVE
+        if code in ("M101", "M102", "M103", "M108"):
+            return GCode.EXTRUDE
 
-    if code == "G1":
-        return MOVE
-    if code in ("M101", "M102", "M103", "M108"):
-        return EXTRUDE
-    elif code is None:
-        print "Not a code line: ["+ gcode_line + "]"
-    else:
-        print "unknown code: " + code
-        return None
-
-def parse_G1_line(gcode_line):
-    match = gcode_move.match(gcode_line)
+    @staticmethod
+    def parse_G1_line(gcode_line):
+        match = gcode_move.match(gcode_line)
     
-    if match is None:
-        return None
+        if match is None:
+            return None
 
-    return [float(match.group(2)), float(match.group(4)),
-            float(match.group(6)), float(match.group(8))]
+        return [float(match.group(2)), float(match.group(4)),
+                float(match.group(6)), float(match.group(8))]
 
 
 class Coord(object):
@@ -100,7 +98,7 @@ class Position(Coord):
         return movement
 
     def gcode_move(self, gcode):
-        values = parse_G1_line(gcode)
+        values = GCode.parse_G1_line(gcode)
 
         if values is None: return None
 
@@ -123,23 +121,16 @@ class Extruder(object):
         return self.extruding
 
     def from_gcode(self, gcode_line):
-        code = code_from_line(gcode_line)
+        code = GCode.code_from_line(gcode_line)
         if code in ("M102", "M103"):
-            print "Switching off extruder"
             self.extruding = False
         elif code == "M101":
-            print "Switching on extruder"
             self.extruding = True
-        else:
-            print "Unknown code: " + code
-            
 
     def getStyle(self):
         if self.extruding:
-            print "extrude"
             return self.extrude_style
         else:
-            print "move"
             return self.move_style
         
 
@@ -150,7 +141,7 @@ gcode_fh = open(gcode_file, "r")
 #find the bounds of the object
 for gcode_line in gcode_fh.readlines():
     gcode_line = gcode_line.rstrip()
-    values = parse_G1_line(gcode_line)
+    values = GCode.parse_G1_line(gcode_line)
 
     if values is None: continue
 
@@ -173,13 +164,12 @@ extruder = Extruder()
 for gcode_line in gcode_fh.readlines():
     gcode_line = gcode_line.rstrip()
 
-    command = line_type(gcode_line)
+    command = GCode.line_type(gcode_line)
 
     movement = None
-    if command == EXTRUDE:
-        print "Extrude line: " + gcode_line
+    if command == GCode.EXTRUDE:
         extruder.from_gcode(gcode_line)
-    elif command == MOVE:
+    elif command == GCode.MOVE:
         movement = cur.gcode_move(gcode_line)
 
     #don't treat anything as real until we see the first layer marker
