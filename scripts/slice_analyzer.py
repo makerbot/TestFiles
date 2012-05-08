@@ -9,7 +9,8 @@ from pysvg.builders import StyleBuilder
 from math import sqrt
 
 layer_begin = re.compile('^\((<layer>|Slice) [\d.]+.*\)$')
-gcode_move = re.compile('G1 (X(-?\d+\.?\d*))? (Y(-?\d+\.?\d*))? (Z(-?\d+\.?\d*))? (F(\d+\.?\d*))?')
+gcode_move = re.compile('G1 (([XYZEF])(-?\d+\.?\d*))? (([XYZEF])(-?\d+\.?\d*))? (([XYZEF])(-?\d+\.?\d*))? (([XYZEF])(-?\d+\.?\d*))? (([XYZEF])(-?\d+\.?\d*))?')
+gcode_axis = re.compile('(([XYZEF])(-?\d+\.?\d*))')
 gcode_command_code = re.compile('([A-Z]\d+)(\s|$)')
 
 gcode_file = sys.argv[1]
@@ -49,8 +50,11 @@ class GCode(object):
         if match is None:
             return None
 
-        return [float(match.group(2)), float(match.group(4)),
-                float(match.group(6)), float(match.group(8))]
+        parsed = dict()
+        for match in gcode_axis.findall(gcode_line):
+            parsed[match.group(2)] = match.group(3)
+
+        return parsed
 
 
 class Coord(object):
@@ -107,8 +111,8 @@ class Position(Coord):
 
         if values is None: return None
 
-        return self.move(Coord(values[0], values[1], values[2]),
-                         values[3])
+        return self.move(Coord(values['X'], values['Y'], values['G']),
+                         values['F'])
 
 class Extruder(object):
     extrude_style = StyleBuilder()
@@ -196,8 +200,8 @@ for gcode_line in gcode_fh.readlines():
 
     if values is None: continue
 
-    if values[0] < min_x: min_x = values[0]
-    if values[1] < min_y: min_y = values[1]
+    if values['X'] < min_x: min_x = values['X']
+    if values['Y'] < min_y: min_y = values['Y']
 
 print "min_x: " + str(min_x)
 print "min_y: " + str(min_y)
