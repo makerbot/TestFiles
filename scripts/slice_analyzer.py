@@ -9,7 +9,7 @@ from pysvg.builders import StyleBuilder
 from math import sqrt
 
 layer_begin = re.compile('^\((<layer>|Slice) [\d.]+.*\)$')
-gcode_move = re.compile('G1 (([XYZEF])(-?\d+\.?\d*))? (([XYZEF])(-?\d+\.?\d*))? (([XYZEF])(-?\d+\.?\d*))? (([XYZEF])(-?\d+\.?\d*))? (([XYZEF])(-?\d+\.?\d*))?')
+gcode_G1 = re.compile('G1(\s+(([XYZEF])(-?\d+\.?\d*)))+')
 gcode_axis = re.compile('(([XYZEF])(-?\d+\.?\d*))')
 gcode_command_code = re.compile('([A-Z]\d+)(\s|$)')
 
@@ -18,14 +18,14 @@ dump_dir = sys.argv[2]
 factor = int(sys.argv[3])
 extruder_mode = int(sys.argv[4])
 
-min_x = 0
-min_y = 0
+min_x = float(0)
+min_y = float(0)
 
 def layer_filename(layer_num):
     return dump_dir+'/layer_'+str(layer_num)+'.svg'
 
 class GCode(object):
-    (MOVE, EXTRUDE) = range(2)
+    (MOVE, EXTRUDE, EMOVE) = range(3)
     
     @staticmethod
     def code_from_line(gcode_line):
@@ -45,23 +45,27 @@ class GCode(object):
 
     @staticmethod
     def parse_G1_line(gcode_line):
-        match = gcode_move.match(gcode_line)
+        match = gcode_G1.match(gcode_line)
     
         if match is None:
             return None
 
-        parsed = dict()
-        for match in gcode_axis.findall(gcode_line):
-            parsed[match.group(2)] = match.group(3)
+        parsed = dict({'X':None, 'Y':None, 'Z':None, 'F':None, 'E':None})
+
+        for match in gcode_axis.finditer(gcode_line):
+            parsed[match.group(2)] = float(match.group(3))
 
         return parsed
 
 
 class Coord(object):
     def __init__(self, x=0, y=0, z=0):
-        self.x = x - min_x
-        self.y = y - min_y 
-        self.z = z
+        if x is None: self.x = None
+        else: self.x = x - min_x
+        if y is None: self.y = None
+        else: self.y = y - min_y 
+        if z is None: self.z = None
+        else: self.z = z
 
     def copy(self, other):
         self.x = other.x
@@ -69,7 +73,19 @@ class Coord(object):
         self.z = other.z
 
     def __sub__(self, other):
-        return Coord(self.x - other.x, self.y - other.y, self.z - other.z)
+        if self.x is None: x = other.x
+        elif other.x is None: x = self.x
+        else: x = self.x - other.x
+        
+        if self.y is None: y = other.x
+        elif other.y is None: y = self.x
+        else: y = self.y - other.y
+
+        if self.z is None: z = other.z
+        elif other.z is None: z = self.z
+        else: z = self.z - other.z
+            
+        return Coord(x, y, z)
 
 class Movement(Coord):
     def __init__(self, start, end, speed):
@@ -84,6 +100,10 @@ class Movement(Coord):
         self.copy(end - start)
 
     def toSVG(self, style):
+        if self.start.x is None or self.start.y is None \
+            or self.end.x is None or self.end.y is None:
+            return None
+
         myline = line(self.start.x * factor, self.start.y * factor,
                       self.end.x * factor, self.end.y * factor)
         myline.set_style(style.getStyle())
@@ -110,8 +130,9 @@ class Position(Coord):
         values = GCode.parse_G1_line(gcode)
 
         if values is None: return None
+        print "gcode move"
 
-        return self.move(Coord(values['X'], values['Y'], values['G']),
+        return self.move(Coord(values['X'], values['Y'], values['Z']),
                          values['F'])
 
 class Extruder(object):
@@ -200,8 +221,13 @@ for gcode_line in gcode_fh.readlines():
 
     if values is None: continue
 
-    if values['X'] < min_x: min_x = values['X']
-    if values['Y'] < min_y: min_y = values['Y']
+    if values['X'] is not None and values['X'] < min_x:
+        min_x = values['X']
+        print "New min_x: " + str(min_x)
+
+    if values['Y'] is not None and values['Y'] < min_y:
+        min_y = values['Y']
+        print "New min_y: " + str(min_y)
 
 print "min_x: " + str(min_x)
 print "min_y: " + str(min_y)
@@ -249,9 +275,9 @@ for gcode_line in gcode_fh.readlines():
         stats.new_layer(layer_num)
     else:
         myline = movement.toSVG(extruder.getStyle())
-        if myline is None:
-            raise Exception("line is being returned as None")
-        out.addElement(myline)
+
+        if myline is not None:
+            out.addElement(myline)
 
         if extruder.is_extruding():
             stats.add_extrude(movement)
