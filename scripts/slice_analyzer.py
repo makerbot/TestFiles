@@ -8,6 +8,22 @@ from pysvg.shape import line
 from pysvg.builders import StyleBuilder
 from math import sqrt
 
+if len(sys.argv) == 1:
+    print """
+
+Slice analyzer
+Usage: 
+    slice_analyzer.py GCODE_FILE OUTPUT_DIRECTORY SCALE_FACTOR EXTRUDER_MODE
+    
+    where:
+        GCODE_FILE       : the input file to analyze
+        OUTPUT_DIRECTORY : the directory where all text and svg files are stored
+        SCALE_FACTOR     : SVG scale factor (10 recommended)
+        EXTRUDER_MODE    : not used? (integer)
+"""
+    
+    sys.exit(-1)
+
 layer_begin = re.compile('^\((<layer>|Slice) [\d.]+.*\)$')
 gcode_G1 = re.compile('G1(\s+(([XYZEF])(-?\d+\.?\d*)))+')
 gcode_axis = re.compile('(([XYZEF])(-?\d+\.?\d*))')
