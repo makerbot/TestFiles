@@ -85,26 +85,41 @@ class Gantry(object):
     def flush_accumulators(self, svg_object):
         '''Output accumulator values to svg and reset them.
         '''
-        stats_strings =     ["_Total Distance : " + str(self.AdistanceAccum +
+        table = "<g transform='translate(32, 32)'>\n"
+        tablec = "</g>\n"
+        
+        def tr(y):
+            return "\t<text font-family='monospace' transform='translate(0," + str(y) + ")'>\n"
+        
+        trc = "\t</text>\n"
+        def td(x):
+            return "\t\t<tspan x='" + str(x) + "'>\n\t\t"
+        tdc = "\t\t</tspan>\n"
+        htmltable =     [["Total Distance  : ", str(self.AdistanceAccum +
                                                   self.BdistanceAccum +
                                                   self.EdistanceAccum +
-                                                  self.DryAccum) + "\n"]
-        stats_strings.append("Ext. A Distance : " + str(self.AdistanceAccum) + "\n")
-        stats_strings.append("Ext. B Distance : " + str(self.BdistanceAccum) + "\n")
-        stats_strings.append("Ext. E Distance : " + str(self.EdistanceAccum) + "\n")
-        stats_strings.append("Moving Distance : " + str(self.DryAccum) + "\n")
-        stats_strings.append("Travel Duration : " + str(self.DurationAccum) + "\n")
-        stats_strings.append("Extruder Toggles: " + str(self.SwitchAccum) + "\n")
-        text_y = 32
-        text_style = pysvg.builders.StyleBuilder()
-        text_style.setFontFamily("monospace")
-        text_style.setFontSize(14)
-        for stat in stats_strings:
-            stats_text = pysvg.text.text(stat, 32, text_y)
-            stats_text.set_style(text_style.getStyle())
-            svg_object.addElement(stats_text)
-            text_y += 18
-            pass
+                                                  self.DryAccum), "(mm)"],
+                         ["Ext. A Distance : ", str(self.AdistanceAccum), "(mm)"],
+                         ["Ext. B Distance : ", str(self.BdistanceAccum), "(mm)"],
+                         ["Ext. E Distance : ", str(self.EdistanceAccum), "(mm)"],
+                         ["Moving Distance : ", str(self.DryAccum), "(mm)"],
+                         ["Travel Duration : ", str(self.DurationAccum), "(sec)"],
+                         ["Extrude Toggles : ", str(self.SwitchAccum), "(sec)"]]
+        y = 0
+        htmlstring = table
+        for row in htmltable:
+            htmlstring += tr(y)
+            y+=18
+            x = 0
+            for col in row:
+                htmlstring += td(x)
+                x += 150
+                htmlstring += col
+                htmlstring += "\n"
+                htmlstring += tdc
+            htmlstring += trc
+        htmlstring += tablec
+        svg_object.appendTextContent(htmlstring)
         self.isExtruding = False
         self.AdistanceAccum = 0.0
         self.BdistanceAccum = 0.0
@@ -333,6 +348,7 @@ def main(argv=None):
             layer_num += 1
             svg_filename = layer_filename(layer_num)
             svg_object = pysvg.structure.svg("Layer " + str(layer_num))
+    gantry.flush_accumulators(svg_object)
     svg_object.save(svg_filename)
     svgList.append(svg_filename)
 
