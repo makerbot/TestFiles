@@ -104,7 +104,7 @@ class Gantry(object):
                          ["Ext. E Distance : ", str(self.EdistanceAccum), "(mm)"],
                          ["Moving Distance : ", str(self.DryAccum), "(mm)"],
                          ["Travel Duration : ", str(self.DurationAccum), "(sec)"],
-                         ["Extrude Toggles : ", str(self.SwitchAccum), "(sec)"]]
+                         ["Extrude Toggles : ", str(self.SwitchAccum), "(count)"]]
         y = 0
         htmlstring = table
         for row in htmltable:
