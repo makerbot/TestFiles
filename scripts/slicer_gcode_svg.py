@@ -18,18 +18,14 @@ extruder_mode = 1
 svg_dir = 'svg/'
 
 extrude_style = pysvg.builders.StyleBuilder()
-extrude_style.setStrokeWidth(.3 * factor)
+extrude_style.setStrokeWidth(.2 * factor)
 extrude_style.setStroke('red')
 
 move_style = pysvg.builders.StyleBuilder()
-move_style.setStrokeWidth(.3 * factor)
+move_style.setStrokeWidth(.2 * factor)
 move_style.setStroke('blue')
 
 layer_begin = re.compile('^\((<layer>|Slice) [\d.]+.*\)$')
-
-    
-if not os.path.exists(dump_dir+svg_dir):
-    os.makedirs(dump_dir+svg_dir)
 
 def layer_filename(layer_num):
     return dump_dir+svg_dir+'layer_'+str(layer_num)+'.svg'
@@ -78,6 +74,8 @@ class Gantry(object):
         self.EdistanceAccum = 0.0
         #how much movement without extruding
         self.DryAccum = 0.0
+        #how many times we retracted
+        self.RetractAccum = 0
         #how many times we switched any extruder on
         self.SwitchAccum = 0
         #how long are we moving on this layer
@@ -95,7 +93,7 @@ class Gantry(object):
         def td(x):
             return "\t\t<tspan x='" + str(x) + "'>\n\t\t"
         tdc = "\t\t</tspan>\n"
-        htmltable =     [["Total Distance  : ", str(self.AdistanceAccum +
+        htmltable =     [["Sum of Distance : ", str(self.AdistanceAccum +
                                                   self.BdistanceAccum +
                                                   self.EdistanceAccum +
                                                   self.DryAccum), "(mm)"],
@@ -104,7 +102,8 @@ class Gantry(object):
                          ["Ext. E Distance : ", str(self.EdistanceAccum), "(mm)"],
                          ["Moving Distance : ", str(self.DryAccum), "(mm)"],
                          ["Travel Duration : ", str(self.DurationAccum), "(sec)"],
-                         ["Extrude Toggles : ", str(self.SwitchAccum), "(count)"]]
+                         ["Extruder Toggle : ", str(self.SwitchAccum), "(count)"],
+                         ["Retractions Num : ", str(self.RetractAccum), "(count)"]]
         y = 0
         htmlstring = table
         for row in htmltable:
@@ -125,6 +124,7 @@ class Gantry(object):
         self.BdistanceAccum = 0.0
         self.EdistanceAccum = 0.0
         self.DryAccum = 0.0
+        self.RetractAccum = 0
         self.SwitchAccum = 0
         self.DurationAccum = 0.0
         
@@ -133,6 +133,7 @@ class Gantry(object):
         '''
         retbool = False
         extrudebool = False
+        retractbool = False
         startpos = self.position - minposition
         endpos = position - minposition
         myline = pysvg.shape.line(startpos.x * factor, startpos.y * factor,
@@ -145,16 +146,23 @@ class Gantry(object):
         #increment appropriate values
         if A != self.A:
             extrudebool = True
+            retractbool = retractbool or A < self.A
             self.AdistanceAccum += distance
         if B != self.B:
             extrudebool = True
+            retractbool = retractbool or B < self.B
             self.BdistanceAccum += distance
         if E != self.E:
             extrudebool = True
+            retractbool = retractbool or E < self.E
             self.EdistanceAccum += distance
         if extrudebool != self.isExtruding:
             self.isExtruding = extrudebool
             self.SwitchAccum += 1
+        if retractbool:
+            self.RetractAccum += 1
+            mycircle = pysvg.shape.circle(endpos.x * factor, endpos.y * factor, 0.3125 * factor)
+            svg_object.addElement(mycircle)
         if Layer:
             retbool = True
         elif extrudebool:
@@ -293,17 +301,20 @@ def main(argv=None):
     """
         return -1
     if lsa >= 2:
-        gcode_file = sys.argv[1];
+        gcode_file = argv[1];
     if lsa >= 3:
-        dump_dir = sys.argv[2];
+        dump_dir = argv[2];
         if dump_dir == '':
             dump_dir = './'
         elif dump_dir[-1] != '/':
             dump_dir = dump_dir + '/'
     if lsa >= 4:
-        factor = int(sys.argv[3]);
+        factor = int(argv[3]);
     if lsa >= 5:
-        extruder_mode = int(sys.argv[4]);
+        extruder_mode = int(argv[4]);
+
+    if not os.path.exists(dump_dir+svg_dir):
+        os.makedirs(dump_dir+svg_dir)
 
     print "Input File: \t" + str(gcode_file)
     print "Output Directory: \t" + str(dump_dir)
@@ -325,6 +336,7 @@ def main(argv=None):
             minposition.x = min([minposition.x, code_dict['X']])
         if 'Y' in code_dict:
             minposition.y = min([minposition.y, code_dict['Y']])
+
 
     print "Minimum Coordinates: \t" + str(minposition)
 
