@@ -385,6 +385,7 @@ def main(argv=None):
             svg_object.save(svg_filename)
             svgList.append(svg_filename)
             sys.stdout.write('.')
+            sys.stdout.flush()
             layer_num += 1
             svg_filename = layer_filename(layer_num)
             svg_object = pysvg.structure.svg("Layer " + str(layer_num))
