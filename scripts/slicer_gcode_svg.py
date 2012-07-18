@@ -80,6 +80,11 @@ class Gantry(object):
         self.SwitchAccum = 0
         #how long are we moving on this layer
         self.DurationAccum = 0.0
+        #information regarding z height
+        self.CurrentZ = 0.0
+        self.SeenLayer = False
+        self.CurrentLayer = 0
+        self.LayerEncounteredOnce = False
     def flush_accumulators(self, svg_object):
         '''Output accumulator values to svg and reset them.
         '''
@@ -93,7 +98,9 @@ class Gantry(object):
         def td(x):
             return "\t\t<tspan x='" + str(x) + "'>\n\t\t"
         tdc = "\t\t</tspan>\n"
-        htmltable =     [["Sum of Distance : ", str(self.AdistanceAccum +
+        htmltable =     [["Current Layer # : ", str(self.CurrentLayer), "(count)"],
+                         ["Current Layer Z : ", str(self.CurrentZ), "(mm)"], 
+                         ["Sum of Distance : ", str(self.AdistanceAccum +
                                                   self.BdistanceAccum +
                                                   self.EdistanceAccum +
                                                   self.DryAccum), "(mm)"],
@@ -104,6 +111,7 @@ class Gantry(object):
                          ["Travel Duration : ", str(self.DurationAccum), "(sec)"],
                          ["Extruder Toggle : ", str(self.SwitchAccum), "(count)"],
                          ["Retractions Num : ", str(self.RetractAccum), "(count)"]]
+        self.CurrentLayer += 1
         y = 0
         htmlstring = table
         for row in htmltable:
@@ -128,9 +136,10 @@ class Gantry(object):
         self.SwitchAccum = 0
         self.DurationAccum = 0.0
         
-    def process_splitcode(self, position, A, B, E, F, Layer, svg_object):
+    def process_splitcode(self, position, A, B, E, F, Layer, Line, svg_object):
         '''Process new position and extrusion axes.
         '''
+        
         retbool = False
         extrudebool = False
         retractbool = False
@@ -156,6 +165,20 @@ class Gantry(object):
             extrudebool = True
             retractbool = retractbool or E < self.E
             self.EdistanceAccum += distance
+        if self.LayerEncounteredOnce:
+            if position.z != self.CurrentZ:
+                if self.SeenLayer:
+                    retbool = True
+                    self.SeenLayer = False
+                else:
+                    print ""
+                    print ("Z change from " + str(self.CurrentZ) + 
+                           " to " + str(position.z) + " without layer label")
+                    print Line
+                    self.CurrentZ = position.z
+                    #exit(1)
+        else:
+            self.CurrentZ = position.z
         if extrudebool != self.isExtruding:
             self.isExtruding = extrudebool
             self.SwitchAccum += 1
@@ -164,7 +187,8 @@ class Gantry(object):
             mycircle = pysvg.shape.circle(endpos.x * factor, endpos.y * factor, 0.3125 * factor)
             svg_object.addElement(mycircle)
         if Layer:
-            retbool = True
+            self.LayerEncounteredOnce = True
+            self.SeenLayer = True
         elif extrudebool:
             #emit an extrusion move
             myline.set_style(extrude_style.getStyle())
@@ -176,6 +200,7 @@ class Gantry(object):
             self.DryAccum += distance
         if retbool:
             self.flush_accumulators(svg_object)
+            self.CurrentZ = position.z
         self.position = position
         self.A = A
         self.B = B
@@ -193,6 +218,7 @@ class Gantry(object):
         E = self.E
         F = None
         Layer = None
+        Line = None
         if 'X' in gcode_dict:
             position.x = gcode_dict['X']
         if 'Y' in gcode_dict:
@@ -209,10 +235,12 @@ class Gantry(object):
             F = gcode_dict['F']
         if 'Layer' in gcode_dict:
             Layer = gcode_dict['Layer']
-        return Gantry.process_splitcode(self, position, A, B, E, F, Layer, svg_object)
+        if 'Line' in gcode_dict:
+            Line = gcode_dict['Line']
+        return Gantry.process_splitcode(self, position, A, B, E, F, Layer, Line, svg_object)
         
 
-def code_dict_from_line(gcode_line):
+def code_dict_from_line(gcode_line, line_num = -1):
     retDict = dict()
     gl = gcode_line.split()
     for word in gl:
@@ -221,7 +249,8 @@ def code_dict_from_line(gcode_line):
         retDict[word[0]] = float(word[1:])
     match = layer_begin.match(gcode_line)
     if match is not None:
-        retDict['Layer'] = True
+        retDict['Layer'] = gcode_line
+    retDict['Line'] = str(line_num) + ": \t" + str(gcode_line)
     return retDict
 
 def make_html(svgList, title):
@@ -348,25 +377,25 @@ def main(argv=None):
 
     svg_filename = layer_filename(layer_num)
     svg_object = pysvg.structure.svg("Layer " + str(layer_num))
-
+    line_num = 1
     print "Starting processing of layers"
-
     for gcode_line in gcode_fh.readlines():
         gcode_line = gcode_line.strip()
-        if gantry.process_code(code_dict_from_line(gcode_line),svg_object):
+        if gantry.process_code(code_dict_from_line(gcode_line, line_num),svg_object):
             svg_object.save(svg_filename)
             svgList.append(svg_filename)
             sys.stdout.write('.')
             layer_num += 1
             svg_filename = layer_filename(layer_num)
             svg_object = pysvg.structure.svg("Layer " + str(layer_num))
+        line_num += 1
     gantry.flush_accumulators(svg_object)
     svg_object.save(svg_filename)
     svgList.append(svg_filename)
 
     print ""
 
-    print "Layers: \t" + str(layer_num)
+    print "Layers Parsed: \t" + str(layer_num)
     print "Starting generation of index"
 
     make_html(svgList, gcode_file)
