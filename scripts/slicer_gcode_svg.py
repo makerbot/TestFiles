@@ -151,7 +151,7 @@ class Gantry(object):
                          ["Ext. B Distance : ", str(self.BdistanceAccum), "(mm)"],
                          ["Ext. E Distance : ", str(self.EdistanceAccum), "(mm)"],
                          ["Moving Distance : ", str(self.DryAccum), "(mm)"],
-                         ["Travel Total_Duration: ", str(self.DurationAccum), "(sec)"],
+                         ["Travel Duration: ", str(self.DurationAccum), "(sec)"],
                          ["Extruder Toggle : ", str(self.SwitchAccum), "(count)"],
                          ["Retractions Num : ", str(self.RetractAccum), "(count)"]]
         self.CurrentLayer += 1
