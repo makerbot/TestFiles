@@ -413,15 +413,19 @@ def main(argv=None):
     svgList = []
 
     #find the bounds of the object
+    seenLayer = False
     for gcode_line in gcode_fh.readlines():
         gcode_line = gcode_line.rstrip()
         code_dict = code_dict_from_line(gcode_line)
-        if 'X' in code_dict:
-            minposition.x = min([minposition.x, code_dict['X']])
-        if 'Y' in code_dict:
-            minposition.y = min([minposition.y, code_dict['Y']])
-
-
+        if 'Layer' in code_dict:
+            seenLayer = True
+        if seenLayer:
+            if 'X' in code_dict:
+                minposition.x = min([minposition.x, code_dict['X']])
+            if 'Y' in code_dict:
+                minposition.y = min([minposition.y, code_dict['Y']])
+    minposition.x -= 32/factor
+    minposition.y -= 224/factor
     print "Minimum Coordinates: \t" + str(minposition)
 
     gcode_fh.close()
