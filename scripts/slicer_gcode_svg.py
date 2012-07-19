@@ -59,6 +59,47 @@ def distance_linear(coord1, coord2):
 #represents the lowest coordinates, used when outputting to svg
 minposition = Coord()
 
+class StatTally(object):
+    def __init__(self):
+        self.Extruder_A_Distance = 0.0
+        self.Extruder_B_Distance = 0.0
+        self.Extruder_E_Distance = 0.0
+        self.Total_Move_Distance= 0.0
+        self.Total_Retracts = 0
+        self.Total_Switches = 0
+        self.Total_Duration= 0.0
+    def write(self, html_fh, tabs = 2):
+        fh = html_fh
+        pretab = ""
+        tab = "\t"
+        for i in range(1, tabs):
+            pretab += tab
+        table = "<table style='font-family: monospace;'>\n"
+        tablec = "</table>\n"
+        tr = "<tr>\n"
+        trc = "</tr>\n"
+        td = "<td>"
+        tdc = "</td>\n"
+        fh.write(pretab + table)
+        for key, value in sorted(self.__dict__.iteritems()):
+            fh.write(pretab + tab + tr)
+            fh.write(pretab + tab + tab + td)
+            fh.write(str(key))
+            fh.write(tdc)
+            fh.write(pretab + tab + tab + td)
+            spacecount = 0
+            while spacecount < 6:
+                fh.write('&nbsp')
+                spacecount += 1
+            fh.write(tdc)
+            fh.write(pretab + tab + tab + td)
+            fh.write(str(value))
+            fh.write(tdc)
+            fh.write(pretab + tab + trc)
+        fh.write(pretab + tablec)
+        
+        
+
 class Gantry(object):
     def __init__(self):
         self.position = Coord()
@@ -85,6 +126,8 @@ class Gantry(object):
         self.SeenLayer = False
         self.CurrentLayer = 0
         self.LayerEncounteredOnce = False
+        #finally, that thing which totals things
+        self.tally = StatTally()
     def flush_accumulators(self, svg_object):
         '''Output accumulator values to svg and reset them.
         '''
@@ -108,7 +151,7 @@ class Gantry(object):
                          ["Ext. B Distance : ", str(self.BdistanceAccum), "(mm)"],
                          ["Ext. E Distance : ", str(self.EdistanceAccum), "(mm)"],
                          ["Moving Distance : ", str(self.DryAccum), "(mm)"],
-                         ["Travel Duration : ", str(self.DurationAccum), "(sec)"],
+                         ["Travel Total_Duration: ", str(self.DurationAccum), "(sec)"],
                          ["Extruder Toggle : ", str(self.SwitchAccum), "(count)"],
                          ["Retractions Num : ", str(self.RetractAccum), "(count)"]]
         self.CurrentLayer += 1
@@ -128,6 +171,16 @@ class Gantry(object):
         htmlstring += tablec
         svg_object.appendTextContent(htmlstring)
         self.isExtruding = False
+        
+        self.tally.Extruder_A_Distance += self.AdistanceAccum
+        self.tally.Extruder_B_Distance += self.BdistanceAccum
+        self.tally.Extruder_E_Distance += self.EdistanceAccum
+        self.tally.Total_Move_Distance+= self.DryAccum
+        self.tally.Total_Retracts += self.RetractAccum
+        self.tally.Total_Switches += self.SwitchAccum
+        self.tally.Total_Duration+= self.DurationAccum
+        
+        
         self.AdistanceAccum = 0.0
         self.BdistanceAccum = 0.0
         self.EdistanceAccum = 0.0
@@ -253,7 +306,7 @@ def code_dict_from_line(gcode_line, line_num = -1):
     retDict['Line'] = str(line_num) + ": \t" + str(gcode_line)
     return retDict
 
-def make_html(svgList, title):
+def make_html(svgList, tally, title):
     if title is None:
         print "Current file name is not valid"
         return
@@ -269,6 +322,8 @@ def make_html(svgList, title):
     #end head
     #body
     fh.write("\t<body>\n")
+    #tally
+    tally.write(fh, 2)
     #table
     fh.write("\t\t<table>\n")
     for svg in svgList:
@@ -399,7 +454,7 @@ def main(argv=None):
     print "Layers Parsed: \t" + str(layer_num)
     print "Starting generation of index"
 
-    make_html(svgList, gcode_file)
+    make_html(svgList, gantry.tally, gcode_file)
     return 0
 
 if __name__ == "__main__":
