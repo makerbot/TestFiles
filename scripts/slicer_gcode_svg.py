@@ -272,24 +272,35 @@ class Gantry(object):
         F = None
         Layer = None
         Line = None
+        ValidBool = False
         if 'X' in gcode_dict:
             position.x = gcode_dict['X']
+            ValidBool = True
         if 'Y' in gcode_dict:
             position.y = gcode_dict['Y']
+            ValidBool = True
         if 'Z' in gcode_dict:
             position.z = gcode_dict['Z']
+            ValidBool = True
         if 'A' in gcode_dict:
             A = gcode_dict['A']
+            ValidBool = True
         if 'B' in gcode_dict:
             B = gcode_dict['B']
+            ValidBool = True
         if 'E' in gcode_dict:
             E = gcode_dict['E']
+            ValidBool = True
         if 'F' in gcode_dict:
             F = gcode_dict['F']
+            ValidBool = True
         if 'Layer' in gcode_dict:
             Layer = gcode_dict['Layer']
+            ValidBool = True
         if 'Line' in gcode_dict:
             Line = gcode_dict['Line']
+        if not ValidBool:
+            return False
         return Gantry.process_splitcode(self, position, A, B, E, F, Layer, Line, svg_object)
         
 
