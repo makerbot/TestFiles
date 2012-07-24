@@ -54,7 +54,7 @@ def main(argv=None):
                     output_dir, 
                     dirtuple[0][len(input_dir):],
                     root+".gcode")
-                subprocess.call(
+                subprocess.check_call(
                     [mg_command,
                      '-c', mg_config,
                      '-o', outputname,
