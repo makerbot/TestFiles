@@ -25,6 +25,14 @@ move_style = pysvg.builders.StyleBuilder()
 move_style.setStrokeWidth(.2 * factor)
 move_style.setStroke('blue')
 
+retract_style = pysvg.builders.StyleBuilder()
+retract_style.setStroke('blue')
+retract_style.setFilling('blue')
+
+extract_style = pysvg.builders.StyleBuilder()
+extract_style.setStroke('red')
+extract_style.setFilling('red')
+
 layer_begin = re.compile('^\((<layer>|Slice) [\d.]+.*\)$')
 
 def layer_filename(layer_num):
@@ -65,8 +73,9 @@ class StatTally(object):
         self.Extruder_B_Distance = 0.0
         self.Extruder_E_Distance = 0.0
         self.Total_Move_Distance= 0.0
-        self.Total_Retracts = 0
-        self.Total_Switches = 0
+        self.Total__Retracts = 0
+        self.Total__Extracts = 0
+        self.Total__Switches = 0
         self.Total_Duration= 0.0
     def write(self, html_fh, tabs = 2):
         fh = html_fh
@@ -117,6 +126,8 @@ class Gantry(object):
         self.DryAccum = 0.0
         #how many times we retracted
         self.RetractAccum = 0
+        #opposite of above
+        self.ExtractAccum = 0
         #how many times we switched any extruder on
         self.SwitchAccum = 0
         #how long are we moving on this layer
@@ -152,8 +163,10 @@ class Gantry(object):
                          ["Ext. E Distance : ", str(self.EdistanceAccum), "(mm)"],
                          ["Moving Distance : ", str(self.DryAccum), "(mm)"],
                          ["Travel Duration: ", str(self.DurationAccum), "(sec)"],
-                         ["Extruder Toggle : ", str(self.SwitchAccum), "(count)"],
-                         ["Retractions Num : ", str(self.RetractAccum), "(count)"]]
+                         ["Observed Toggle : ", str(self.SwitchAccum), "(count)"],
+                         ["Expected Toggle : ", str(self.RetractAccum + self.ExtractAccum), "(count)"],
+                         ["Retractions Num : ", str(self.RetractAccum), "(count)"],
+                         ["Extractions Num : ", str(self.ExtractAccum), "(count)"]]
         self.CurrentLayer += 1
         y = 0
         htmlstring = table
@@ -176,8 +189,9 @@ class Gantry(object):
         self.tally.Extruder_B_Distance += self.BdistanceAccum
         self.tally.Extruder_E_Distance += self.EdistanceAccum
         self.tally.Total_Move_Distance+= self.DryAccum
-        self.tally.Total_Retracts += self.RetractAccum
-        self.tally.Total_Switches += self.SwitchAccum
+        self.tally.Total__Retracts += self.RetractAccum
+        self.tally.Total__Extracts += self.ExtractAccum
+        self.tally.Total__Switches += self.SwitchAccum
         self.tally.Total_Duration+= self.DurationAccum
         
         
@@ -186,6 +200,7 @@ class Gantry(object):
         self.EdistanceAccum = 0.0
         self.DryAccum = 0.0
         self.RetractAccum = 0
+        self.ExtractAccum = 0
         self.SwitchAccum = 0
         self.DurationAccum = 0.0
         
@@ -196,6 +211,7 @@ class Gantry(object):
         retbool = False
         extrudebool = False
         retractbool = False
+        extractbool = False
         startpos = self.position - minposition
         endpos = position - minposition
         myline = pysvg.shape.line(startpos.x * factor, startpos.y * factor,
@@ -209,14 +225,17 @@ class Gantry(object):
         if A != self.A:
             extrudebool = True
             retractbool = retractbool or A < self.A
+            extractbool = extractbool or ((not retractbool) and distance == 0.0)
             self.AdistanceAccum += distance
         if B != self.B:
             extrudebool = True
             retractbool = retractbool or B < self.B
+            extractbool = extractbool or ((not retractbool) and distance == 0.0)
             self.BdistanceAccum += distance
         if E != self.E:
             extrudebool = True
             retractbool = retractbool or E < self.E
+            extractbool = extractbool or ((not retractbool) and distance == 0.0)
             self.EdistanceAccum += distance
         if self.LayerEncounteredOnce:
             if position.z != self.CurrentZ:
@@ -238,6 +257,12 @@ class Gantry(object):
         if retractbool:
             self.RetractAccum += 1
             mycircle = pysvg.shape.circle(endpos.x * factor, endpos.y * factor, 0.3125 * factor)
+            mycircle.set_style(retract_style.getStyle())
+            svg_object.addElement(mycircle)
+        if extractbool:
+            self.ExtractAccum += 1
+            mycircle = pysvg.shape.circle(endpos.x * factor, endpos.y * factor, 0.3125 * factor)
+            mycircle.set_style(extract_style.getStyle())
             svg_object.addElement(mycircle)
         if Layer:
             self.LayerEncounteredOnce = True
