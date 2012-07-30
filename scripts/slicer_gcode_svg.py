@@ -461,7 +461,7 @@ def main(argv=None):
             if 'Y' in code_dict:
                 minposition.y = min([minposition.y, code_dict['Y']])
     minposition.x -= 32/factor
-    minposition.y -= 224/factor
+    minposition.y -= 256/factor
     print "Minimum Coordinates: \t" + str(minposition)
 
     gcode_fh.close()
