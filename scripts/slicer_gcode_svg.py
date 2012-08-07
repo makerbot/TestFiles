@@ -256,12 +256,12 @@ class Gantry(object):
             self.SwitchAccum += 1
         if retractbool:
             self.RetractAccum += 1
-            mycircle = pysvg.shape.circle(endpos.x * factor, endpos.y * factor, 0.3125 * factor)
+            mycircle = pysvg.shape.circle(endpos.x * factor, endpos.y * factor, 0.25 * factor)
             mycircle.set_style(retract_style.getStyle())
             svg_object.addElement(mycircle)
         if extractbool:
             self.ExtractAccum += 1
-            mycircle = pysvg.shape.circle(endpos.x * factor, endpos.y * factor, 0.3125 * factor)
+            mycircle = pysvg.shape.circle(endpos.x * factor, endpos.y * factor, 0.25 * factor)
             mycircle.set_style(extract_style.getStyle())
             svg_object.addElement(mycircle)
         if Layer:
