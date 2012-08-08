@@ -77,6 +77,7 @@ class StatTally(object):
         self.Total__Extracts = 0
         self.Total__Switches = 0
         self.Total_Duration= 0.0
+        self.Move_Count = 0
     def write(self, html_fh, tabs = 2):
         fh = html_fh
         pretab = ""
@@ -137,6 +138,7 @@ class Gantry(object):
         self.SeenLayer = False
         self.CurrentLayer = 0
         self.LayerEncounteredOnce = False
+        self.MoveCount = 0
         #finally, that thing which totals things
         self.tally = StatTally()
     def flush_accumulators(self, svg_object):
@@ -166,7 +168,8 @@ class Gantry(object):
                          ["Observed Toggle : ", str(self.SwitchAccum), "(count)"],
                          ["Expected Toggle : ", str(self.RetractAccum + self.ExtractAccum), "(count)"],
                          ["Retractions Num : ", str(self.RetractAccum), "(count)"],
-                         ["Extractions Num : ", str(self.ExtractAccum), "(count)"]]
+                         ["Extractions Num : ", str(self.ExtractAccum), "(count)"],
+                         ["Movements Count : ", str(self.MoveCount), "(count)"]]
         self.CurrentLayer += 1
         y = 0
         htmlstring = table
@@ -193,7 +196,7 @@ class Gantry(object):
         self.tally.Total__Extracts += self.ExtractAccum
         self.tally.Total__Switches += self.SwitchAccum
         self.tally.Total_Duration+= self.DurationAccum
-        
+        self.tally.Move_Count += self.MoveCount        
         
         self.AdistanceAccum = 0.0
         self.BdistanceAccum = 0.0
@@ -203,10 +206,13 @@ class Gantry(object):
         self.ExtractAccum = 0
         self.SwitchAccum = 0
         self.DurationAccum = 0.0
+        self.MoveCount = 0
         
     def process_splitcode(self, position, A, B, E, F, Layer, Line, svg_object):
         '''Process new position and extrusion axes.
         '''
+
+        self.MoveCount += 1
         
         retbool = False
         extrudebool = False
