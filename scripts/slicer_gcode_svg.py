@@ -12,7 +12,7 @@ from math import sqrt
 
 gcode_file = ''
 dump_dir = './'
-factor = 10
+factor = 10.0
 extruder_mode = 1
 
 svg_dir = 'svg/'
@@ -348,6 +348,25 @@ def code_dict_from_line(gcode_line, line_num = -1):
     retDict['Line'] = str(line_num) + ": \t" + str(gcode_line)
     return retDict
 
+#ugly global hack
+last_s3g_z = None
+
+def code_dict_from_s3g(s3gline, line_num = -1):
+    global last_s3g_z
+    retDict = dict()
+    if (s3gline[:6] == '[139, ' or
+        s3gline[:6] == '[142, ') and s3gline[-1] == ']':
+        s3gline = s3gline[6:-1]
+        args = s3gline.split(', ')
+        codes = 'XYZABF'
+        for i in range(len(codes)):
+            retDict[codes[i]] = float(args[i])
+        if last_s3g_z != retDict['Z']:
+            last_s3g_z = retDict['Z']
+            retDict['Layer'] = s3gline
+        retDict['Line'] = str(line_num) + ": \t" + str(s3gline)
+    return retDict
+
 def make_html(svgList, tally, title):
     if title is None:
         print "Current file name is not valid"
@@ -435,16 +454,23 @@ def main(argv=None):
         elif dump_dir[-1] != '/':
             dump_dir = dump_dir + '/'
     if lsa >= 4:
-        factor = int(argv[3]);
+        factor = float(argv[3]);
     if lsa >= 5:
         extruder_mode = int(argv[4]);
 
     if not os.path.exists(dump_dir+svg_dir):
         os.makedirs(dump_dir+svg_dir)
 
+    translate = None
+
     print "Input File: \t" + str(gcode_file)
     print "Output Directory: \t" + str(dump_dir)
     print "Scaling Factor: \t" + str(factor)
+    print gcode_file[-5:]
+    if gcode_file[-5:].lower() == 'gcode':
+        translate = code_dict_from_line
+    else:
+        translate = code_dict_from_s3g
 
     if not os.path.exists(dump_dir):
         os.makedirs(dump_dir)
@@ -458,7 +484,7 @@ def main(argv=None):
     seenLayer = False
     for gcode_line in gcode_fh.readlines():
         gcode_line = gcode_line.rstrip()
-        code_dict = code_dict_from_line(gcode_line)
+        code_dict = translate(gcode_line)
         if 'Layer' in code_dict:
             seenLayer = True
         if seenLayer:
@@ -482,7 +508,7 @@ def main(argv=None):
     print "Starting processing of layers"
     for gcode_line in gcode_fh.readlines():
         gcode_line = gcode_line.strip()
-        if gantry.process_code(code_dict_from_line(gcode_line, line_num),svg_object):
+        if gantry.process_code(translate(gcode_line, line_num),svg_object):
             svg_object.save(svg_filename)
             svgList.append(svg_filename)
             sys.stdout.write('.')
