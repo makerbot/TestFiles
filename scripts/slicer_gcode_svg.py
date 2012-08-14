@@ -93,8 +93,8 @@ class StatTally(object):
         nbsp = '&nbsp'
         self.write_generic(fh, pretab, tab, 
                       table, tablec, 
-                      tr, trc, td, tdc, nbsp)
-    def write_text(self, text_fh, tabs = 2):
+                      tr, trc, td, tdc, 6, nbsp)
+    def write_text(self, text_fh, tabs = 0):
         fh = text_fh
         pretab = ""
         tab = "  "
@@ -102,28 +102,28 @@ class StatTally(object):
             pretab += tab
         table = "\n"
         tablec = "\n\n"
-        tr = "\n"
+        tr = ""
         trc = "\n"
         td = ""
         tdc = ""
         nbsp = ""
         self.write_generic(fh, pretab, tab, 
                       table, tablec, 
-                      tr, trc, td, tdc, nbsp)
+                      tr, trc, td, tdc, 0, nbsp)
     def write_generic(self, fh, 
                       pretab, tab, 
                       table, tablec, 
                       tr, trc, 
-                      td, tdc, nbsp): 
+                      td, tdc, spacecount, nbsp): 
         fh.write(pretab + table)
         for key, value in sorted(self.__dict__.iteritems()):
             fh.write(pretab + tab + tr)
             fh.write(pretab + tab + tab + td)
-            fh.write(str(key).ljust(24))
+            fh.write((str(key)+':').ljust(24))
             fh.write(tdc)
             fh.write(pretab + tab + tab + td)
             spacecount = 0
-            while spacecount < 2:
+            while spacecount < spacecount:
                 fh.write(nbsp)
                 spacecount += 1
             fh.write(tdc)
@@ -189,7 +189,7 @@ class Gantry(object):
                          ["Ext. B Distance : ", str(self.BdistanceAccum), "(mm)"],
                          ["Ext. E Distance : ", str(self.EdistanceAccum), "(mm)"],
                          ["Moving Distance : ", str(self.DryAccum), "(mm)"],
-                         ["Travel Duration: ", str(self.DurationAccum), "(sec)"],
+                         ["Travel Duration : ", str(self.DurationAccum), "(sec)"],
                          ["Observed Toggle : ", str(self.SwitchAccum), "(count)"],
                          ["Expected Toggle : ", str(self.RetractAccum + self.ExtractAccum), "(count)"],
                          ["Retractions Num : ", str(self.RetractAccum), "(count)"],

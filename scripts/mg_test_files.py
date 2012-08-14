@@ -38,12 +38,15 @@ def mg_batch_slice(argv=None):
         help='top folder where to place generated files',
         default=None)
     args = []
-    args = parser.parse_args()
+    if argv is None:
+        argv = sys.argv[1:]
+    args = parser.parse_args(argv)
     
-    mg_command=args.MG_PATH
-    mg_config=args.MG_CONFIG
-    input_dir=args.INPUT_PATH
-    output_dir=(input_dir if args.OUTPUT_PATH is None else args.OUTPUT_PATH)
+    mg_command=os.path.abspath(args.MG_PATH)
+    mg_config=os.path.abspath(args.MG_CONFIG)
+    input_dir=os.path.abspath(args.INPUT_PATH)
+    output_dir=(input_dir if args.OUTPUT_PATH is None else 
+                os.path.abspath(args.OUTPUT_PATH))
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
     statsdict = dict()
@@ -52,10 +55,13 @@ def mg_batch_slice(argv=None):
             (root, ext) = os.path.splitext(filename)
             if ext==".stl":
                 filepath=os.path.join(dirtuple[0], filename)
-                gcodename=os.path.join(
-                    output_dir, 
-                    dirtuple[0][len(input_dir):],
-                    root)
+                filepath=os.path.abspath(filepath)
+                endpath=dirtuple[0][len(input_dir)+1:]
+                gcodepath=os.path.join(output_dir, endpath)
+                if not os.path.exists(gcodepath):
+                    os.makedirs(gcodepath)
+                gcodename=os.path.join(gcodepath, root)
+                gcodename=os.path.abspath(gcodename)
                 outputname=gcodename + '.gcode'
                 starttime = time.clock()
                 subprocess.check_call(

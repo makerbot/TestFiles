@@ -2,7 +2,6 @@
 
 import os
 import sys
-import subprocess
 import argparse
 import slicer_gcode_svg
 
@@ -11,7 +10,7 @@ class GcodeStat(object):
         self.tally = slicer_gcode_svg.StatTally()
 
 def slice_visualize(gcodename, gcodefile, outputdir, statsfile = None, statsdict = None):
-    tally = slicer_gcode_svg.runvisualizer(['stats_from_gcode.py', gcodefile, outputdir])
+    tally = slicer_gcode_svg.runvisualizer(['slicer_gcode_svg.py', gcodefile, outputdir])
     if tally is None:
         #raise an exception, we failed to slice!
         return
@@ -24,7 +23,7 @@ def slice_visualize(gcodename, gcodefile, outputdir, statsfile = None, statsdict
         statsdict[gcodename]['tally'] = tally
     
 
-def main(argv=None):
+def gather_stats(argv=None, statsdict=dict()):
     parser=argparse.ArgumentParser(
         description="")
     #MONKEY PATCH BEGIN
@@ -42,10 +41,13 @@ def main(argv=None):
         help='top folder where to place generated stats and visualizations',
         default=None)
     args = []
-    args = parser.parse_args()
+    if argv is None:
+        argv = sys.argv[1:]
+    args = parser.parse_args(argv)
     
-    input_dir=args.INPUT_PATH
-    output_dir=(input_dir if args.OUTPUT_PATH is None else args.OUTPUT_PATH)
+    input_dir=os.path.abspath(args.INPUT_PATH)
+    output_dir=(input_dir if args.OUTPUT_PATH is None else 
+                os.path.abspath(args.OUTPUT_PATH))
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
     
@@ -59,13 +61,19 @@ def main(argv=None):
         for filename in dirtuple[2]:
             (root, ext) = os.path.splitext(filename)
             if ext==".gcode":
+                gcodename=os.path.join(dirtuple[0], root)
                 filepath=os.path.join(dirtuple[0], filename)
+                gcodename
                 outputname=os.path.join(
                     output_dir, 
-                    dirtuple[0][len(input_dir):],
+                    dirtuple[0][len(input_dir)+1:],
                     root)
-                slice_visualize(outputname, filepath, outputname, 
-                                statsfile = stats_fh, statsdict = dict())
+                slice_visualize(gcodename, filepath, outputname, 
+                                statsfile = stats_fh, statsdict = statsdict)
+    return 0
+                                
+def main(argv=None):
+    return gather_stats(argv)
     
 if __name__=="__main__":
     sys.exit(main())
