@@ -4,6 +4,7 @@ import os
 import sys
 import subprocess
 import argparse
+import time
 
 def print_stl(filepath, filename, mg_command, output_dir):
     filename = filename[:-4] + ".gcode"
@@ -13,7 +14,7 @@ def print_stl(filepath, filename, mg_command, output_dir):
     return os.system(command)
     
 
-def main(argv=None):
+def mg_batch_slice(argv=None):
     parser=argparse.ArgumentParser(
         description="Slices files with MG and puts them in a directory")
     #MONKEY PATCH BEGIN
@@ -45,20 +46,34 @@ def main(argv=None):
     output_dir=(input_dir if args.OUTPUT_PATH is None else args.OUTPUT_PATH)
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
+    statsdict = dict()
     for dirtuple in os.walk(input_dir):
         for filename in dirtuple[2]:
             (root, ext) = os.path.splitext(filename)
             if ext==".stl":
                 filepath=os.path.join(dirtuple[0], filename)
-                outputname=os.path.join(
+                gcodename=os.path.join(
                     output_dir, 
                     dirtuple[0][len(input_dir):],
-                    root+".gcode")
+                    root)
+                outputname=gcodename + '.gcode'
+                starttime = time.clock()
                 subprocess.check_call(
                     [mg_command,
                      '-c', mg_config,
                      '-o', outputname,
                      filepath])
-    
+                endtime = time.clock()
+                duration = endtime - starttime
+                if gcodename not in statsdict:
+                    statsdict[gcodename] = dict()
+                statsdict[gcodename]['time'] = duration
+                print "Slicing file " + gcodename + " took " + str(duration) + " seconds"
+    return statsdict
+                
+
+def main(argv=None):
+    return (1 if mg_batch_slice(argv) is None else 0)
+
 if __name__=="__main__":
     sys.exit(main())
