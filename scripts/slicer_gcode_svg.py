@@ -90,20 +90,45 @@ class StatTally(object):
         trc = "</tr>\n"
         td = "<td>"
         tdc = "</td>\n"
+        nbsp = '&nbsp'
+        self.write_generic(fh, pretab, tab, 
+                      table, tablec, 
+                      tr, trc, td, tdc, nbsp)
+    def write_text(self, text_fh, tabs = 2):
+        fh = text_fh
+        pretab = ""
+        tab = "  "
+        for i in range(1, tabs):
+            pretab += tab
+        table = "\n"
+        tablec = "\n\n"
+        tr = "\n"
+        trc = "\n"
+        td = ""
+        tdc = ""
+        nbsp = ""
+        self.write_generic(fh, pretab, tab, 
+                      table, tablec, 
+                      tr, trc, td, tdc, nbsp)
+    def write_generic(self, fh, 
+                      pretab, tab, 
+                      table, tablec, 
+                      tr, trc, 
+                      td, tdc, nbsp): 
         fh.write(pretab + table)
         for key, value in sorted(self.__dict__.iteritems()):
             fh.write(pretab + tab + tr)
             fh.write(pretab + tab + tab + td)
-            fh.write(str(key))
+            fh.write(str(key).ljust(24))
             fh.write(tdc)
             fh.write(pretab + tab + tab + td)
             spacecount = 0
-            while spacecount < 6:
-                fh.write('&nbsp')
+            while spacecount < 2:
+                fh.write(nbsp)
                 spacecount += 1
             fh.write(tdc)
             fh.write(pretab + tab + tab + td)
-            fh.write(str(value))
+            fh.write(str(value).ljust(24))
             fh.write(tdc)
             fh.write(pretab + tab + trc)
         fh.write(pretab + tablec)
@@ -415,7 +440,7 @@ def make_html(svgList, tally, title):
 
 ################################################################################
 
-def main(argv=None):
+def runvisualizer(argv=None):
     
     if argv is None:
         argv = sys.argv
@@ -527,7 +552,11 @@ def main(argv=None):
     print "Starting generation of index"
 
     make_html(svgList, gantry.tally, gcode_file)
-    return 0
+    return gantry.tally
+
+def main(argv = None):
+    return (1 if runvisualizer(argv) is None else 0)
+    
 
 if __name__ == "__main__":
     sys.exit(main())
