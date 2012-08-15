@@ -1,0 +1,87 @@
+README_SLICERCUP:
+Instructions on how to use slicercup.py
+
+Slcercup is a utility for slicing a directory of stl files with your favorite
+slicer, gathering various stats about the sliced files, and generating svg
+visualization of the resulting gcode.
+
+Usage:
+slicercup.py SLICER_PATH SLICER_CONFIG STL_PATH [GCODE_PATH] [STAT_PATH]
+
+Arguments:
+  SLICER_PATH    path to slicer executable file
+  SLICER_CONFIG  path to slicer configuration file
+  STL_PATH       top folder containing input stl files - parsed recursively
+  GCODE_PATH     top folder where to place generated files
+  STAT_PATH      top folder where to place generated files
+
+Argument descriptions:
+  SLICER_PATH
+    This is the path for the executable file which is your slicer. At the 
+    moment, miracle grue and skeinforge is supported. 
+    
+    When invoking miracle 
+    grue, this value should be the path of the binary miracle_grue file (.ex 
+    /usr/bin/Miracle-Grue/bin/miracle_grue or 
+    C:\Miracle-Grue\bin\miracle_grue.exe). 
+    
+    When invoking skeinforge, this 
+    should be the path to the skeinforge.py as follows (.ex 
+    /skeinforge/skeinforge_application/skeinforge.py). Please make sure this 
+    is the same version of skeinforge used by conveyor.
+
+  SLICER_CONFIG
+    This is the path to the configuration file for your slicer.
+    
+    For miracle grue, this is miracle.config (.ex Miracle-Grue/miracle.config)
+    
+    For skeinforge, this is the directory that contains the profiles. I 
+    recommend using the 'Replicator slicing defaults' that conveyor uses.
+
+  STL_PATH
+    This is the root of the directory tree which contains the stl files you
+    wish to slice. The script will examine the entire directory tree from 
+    this foulder down and slice any .stl file it finds using your slicer and 
+    configuration.
+    
+    A failed slice will crash the script.
+
+  GCODE_PATH
+    Directory where to output the gcode files. Defaults to STL_PATH. This 
+    foulder will have the same directory structure as STL_PATH.
+
+  STAT_PATH
+    Directory where to output visualizations and stats. Defaults to 
+    GCODE_PATH. This foulder will have the same structure as GCODE_PATH. For 
+    each gcode file in GCODE_PATH, a folder will be created at the 
+    corresponding location in STAT_PATH with the name of the gcode file. This 
+    folder will contain the visualization of the gcode. View index.html in 
+    this folder for more details.
+    
+    STAT_PATH will contain a gcodestats.txt with the stats for each gcode 
+    file, as well as a total accross all files.
+
+Stats Gathered:
+    Stats are gathered in two stages: Slicing and Visualization.
+    
+    Slicing gathers slice time and file size.
+    
+    Visualization gathers print data such as move count, move distance, and 
+    retracts.
+    
+    Here is the information you can expect to see for each model you slice 
+    using this script:
+    
+    Model Name
+        Slice Duration
+        File Size
+        
+        Distance moved while extruding
+        Number of moves made
+        Duration of all moves
+        Distance moved while not extruding
+        Number of retracts
+        Number of extracts (opposite of above)
+        Number of switches (should be sum of above two)
+
+
