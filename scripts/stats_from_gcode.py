@@ -5,6 +5,8 @@ import sys
 import argparse
 import slicer_gcode_svg
 
+TOTALS = '___TOTALS___'
+
 class GcodeStat(object):
     def __init__(self):
         self.tally = slicer_gcode_svg.StatTally()
@@ -21,7 +23,12 @@ def slice_visualize(gcodename, gcodefile, outputdir, statsfile = None, statsdict
         if gcodename not in statsdict:
             statsdict[gcodename]=dict()
         statsdict[gcodename]['tally'] = tally
-    
+        if TOTALS not in statsdict:
+            statsdict[TOTALS]=dict()
+        if 'tally' not in statsdict[TOTALS]:
+            statsdict[TOTALS]['tally'] = slicer_gcode_svg.StatTally()
+        for (key, value) in statsdict[TOTALS]['tally'].__dict__.items():
+            statsdict[TOTALS]['tally'].__dict__[key]+=tally.__dict__[key]
 
 def gather_stats(argv=None, statsdict=dict()):
     parser=argparse.ArgumentParser(
@@ -68,8 +75,14 @@ def gather_stats(argv=None, statsdict=dict()):
                     output_dir, 
                     dirtuple[0][len(input_dir)+1:],
                     root)
+                print ""
+                print "**"+ str("VISUALIZING " + root).center(67) +"**"
+                print ""
                 slice_visualize(gcodename, filepath, outputname, 
                                 statsfile = stats_fh, statsdict = statsdict)
+    if TOTALS in statsdict:
+        stats_fh.write(TOTALS + '\n')
+        statsdict[TOTALS]['tally'].write_text(stats_fh, 0)
     return 0
                                 
 def main(argv=None):
