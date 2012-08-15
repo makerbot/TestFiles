@@ -16,17 +16,25 @@ def slice_visualize(gcodename, gcodefile, outputdir, statsfile = None, statsdict
     if tally is None:
         #raise an exception, we failed to slice!
         return
+    filesize = os.stat(gcodefile).st_size
     if statsfile is not None:
         statsfile.write(gcodename + '\n')
+        size_str = "%0.2f" % (float(filesize)/1048576)
+        statsfile.write("      "+str("File Size (MB): ").ljust(24)
+                           + "        " + size_str + '\n')  
         tally.write_text(statsfile, 0)
     if statsdict is not None:
         if gcodename not in statsdict:
             statsdict[gcodename]=dict()
         statsdict[gcodename]['tally'] = tally
+        statsdict[gcodename]['size'] = filesize
         if TOTALS not in statsdict:
             statsdict[TOTALS]=dict()
         if 'tally' not in statsdict[TOTALS]:
             statsdict[TOTALS]['tally'] = slicer_gcode_svg.StatTally()
+        if 'size' not in statsdict[TOTALS]:
+            statsdict[TOTALS]['size'] = 0
+        statsdict[TOTALS]['size'] += filesize
         for (key, value) in statsdict[TOTALS]['tally'].__dict__.items():
             statsdict[TOTALS]['tally'].__dict__[key]+=tally.__dict__[key]
 
@@ -82,6 +90,9 @@ def gather_stats(argv=None, statsdict=dict()):
                                 statsfile = stats_fh, statsdict = statsdict)
     if TOTALS in statsdict:
         stats_fh.write(TOTALS + '\n')
+        size_str = "%0.2f" % (float(statsdict[TOTALS]['size'])/1048576)
+        stats_fh.write("      "+str("File Size (MB): ").ljust(24)
+                           + "        " + size_str + '\n')  
         statsdict[TOTALS]['tally'].write_text(stats_fh, 0)
     return 0
                                 

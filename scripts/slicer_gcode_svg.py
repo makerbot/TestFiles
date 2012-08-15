@@ -116,7 +116,7 @@ class StatTally(object):
                       tr, trc, 
                       td, tdc, spacecount, nbsp): 
         fh.write(pretab + table)
-        for key, value in sorted(self.__dict__.iteritems()):
+        for (key, value) in sorted(self.__dict__.iteritems()):
             fh.write(pretab + tab + tr)
             fh.write(pretab + tab + tab + td)
             fh.write((str(key)+':').ljust(24))
