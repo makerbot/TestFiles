@@ -9,15 +9,19 @@ import time
 TOTALS = '___TOTALS___'
 
 def mg_slice_model(binary_dir, config_dir, input_dir, output_dir):
-    subprocess.check_call([binary_dir,
-                          '-c', config_dir,
-                          '-o', output_dir,
-                          input_dir])
+    argslist = [binary_dir, '-c', config_dir, 
+                '-o', output_dir, input_dir]
+    sys.stdout.write('\nSlicer command:\n')
+    for curarg in argslist:
+        sys.stdout.write(curarg + ' ')
+    sys.stdout.write('\n\n')
+    subprocess.check_call(argslist)
 
 def skein_slice_model(binary_dir, config_dir, input_dir, output_dir):
     print("inside skein slice")
     import skeinforge
-    skeinforge.slice(['skeinforge.py', binary_dir, config_dir, input_dir, output_dir])
+    argslist = ['skeinforge.py', binary_dir, config_dir, input_dir, output_dir]
+    skeinforge.slice(argslist)
 
 def dispatch_slice_model(binary_dir, config_dir, input_dir, output_dir):
     """Determine which slicer to use, then use it to slice model"""

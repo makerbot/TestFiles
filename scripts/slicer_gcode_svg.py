@@ -441,8 +441,26 @@ def make_html(svgList, tally, title):
 ################################################################################
 
 def runvisualizer(argv=None):
+    global extrude_style
+    extrude_style = pysvg.builders.StyleBuilder()
+    extrude_style.setStrokeWidth(.2 * factor)
+    extrude_style.setStroke('red')
+    global move_style
+    move_style = pysvg.builders.StyleBuilder()
+    move_style.setStrokeWidth(.2 * factor)
+    move_style.setStroke('blue')
+    global retract_style
+    retract_style = pysvg.builders.StyleBuilder()
+    retract_style.setStroke('blue')
+    retract_style.setFilling('blue')
+    global extract_style
+    extract_style = pysvg.builders.StyleBuilder()
+    extract_style.setStroke('red')
+    extract_style.setFilling('red')
+    global minposition
+    minposition = Coord()
     
-    if argv is None:
+    if argv is None: 
         argv = sys.argv
         
     lsa = len(argv)

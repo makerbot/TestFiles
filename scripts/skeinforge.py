@@ -69,7 +69,7 @@ class SkeinforgeToolpath(object):
                 tmp_stldir = os.path.dirname(tmp_stlpath)
                 if not os.path.exists(tmp_stldir):
                     os.makedirs(tmp_stldir)
-                with open(tmp_stlpath, 'w') as tmp_stlfh, open(stlpath, 'r') as stlfh:
+                with open(tmp_stlpath, 'wb') as tmp_stlfh, open(stlpath, 'rb') as stlfh:
                     stldata = stlfh.read()
                     tmp_stlfh.write(stldata)
                 arguments = list(
