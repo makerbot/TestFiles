@@ -441,35 +441,17 @@ def make_html(svgList, tally, title):
 ################################################################################
 
 def runvisualizer(argv=None):
-    global extrude_style
-    extrude_style = pysvg.builders.StyleBuilder()
-    extrude_style.setStrokeWidth(.2 * factor)
-    extrude_style.setStroke('red')
-    global move_style
-    move_style = pysvg.builders.StyleBuilder()
-    move_style.setStrokeWidth(.2 * factor)
-    move_style.setStroke('blue')
-    global retract_style
-    retract_style = pysvg.builders.StyleBuilder()
-    retract_style.setStroke('blue')
-    retract_style.setFilling('blue')
-    global extract_style
-    extract_style = pysvg.builders.StyleBuilder()
-    extract_style.setStroke('red')
-    extract_style.setFilling('red')
-    global minposition
-    minposition = Coord()
+
+    global gcode_file
+    global dump_dir
+    global factor
+    global extuder_mode
     
     if argv is None: 
         argv = sys.argv
         
     lsa = len(argv)
     print "slice_analyzer: ", lsa, " arguments\n";
-
-    global gcode_file
-    global dump_dir
-    global factor
-    global extuder_mode
     
     for arg in range(0, lsa):
         print "#", arg, ": \t", argv[arg];
@@ -503,6 +485,25 @@ def runvisualizer(argv=None):
 
     if not os.path.exists(dump_dir+svg_dir):
         os.makedirs(dump_dir+svg_dir)
+    
+    global extrude_style
+    extrude_style = pysvg.builders.StyleBuilder()
+    extrude_style.setStrokeWidth(.2 * factor)
+    extrude_style.setStroke('red')
+    global move_style
+    move_style = pysvg.builders.StyleBuilder()
+    move_style.setStrokeWidth(.2 * factor)
+    move_style.setStroke('blue')
+    global retract_style
+    retract_style = pysvg.builders.StyleBuilder()
+    retract_style.setStroke('blue')
+    retract_style.setFilling('blue')
+    global extract_style
+    extract_style = pysvg.builders.StyleBuilder()
+    extract_style.setStroke('red')
+    extract_style.setFilling('red')
+    global minposition
+    minposition = Coord()
 
     translate = None
 
