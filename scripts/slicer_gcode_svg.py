@@ -33,7 +33,7 @@ extract_style = pysvg.builders.StyleBuilder()
 extract_style.setStroke('red')
 extract_style.setFilling('red')
 
-layer_begin = re.compile('^\((<layer>|Slice) [\d.]+.*\)$')
+layer_begin = re.compile('^(\(|;)(<layer>|Slice) [\d.]+.*(\)|:)?$')
 
 def layer_filename(layer_num):
     return dump_dir+svg_dir+'layer_'+str(layer_num)+'.svg'
