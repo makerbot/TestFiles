@@ -34,6 +34,9 @@ extract_style.setStroke('red')
 extract_style.setFilling('red')
 
 layer_begin = re.compile('^(\(|;)(<layer>|Slice) [\d.]+.*(\)|:)?$')
+paramcodes = 'XYZFABE'
+g1re = re.compile('^G1\s+(?P<param>(['+paramcodes+']-?\d+(\.\d*)?\s*)+)(?P<comment>.*)')
+paramre = re.compile('(?P<code>['+paramcodes+'])(?P<value>-?\d+(\.\d*)?)')
 
 def layer_filename(layer_num):
     return dump_dir+svg_dir+'layer_'+str(layer_num)+'.svg'
@@ -362,15 +365,16 @@ class Gantry(object):
 
 def code_dict_from_line(gcode_line, line_num = -1):
     retDict = dict()
-    gl = gcode_line.split()
-    for word in gl:
-        if len(word) < 2 or word[0] not in 'ABEFGMXYZ':
-            break
-        retDict[word[0]] = float(word[1:])
+    g1match = g1re.match(gcode_line)
+    if None is not g1match:
+        data = paramre.finditer(g1match.group('param'))
+        for match in data:
+            retDict[match.group('code')] = float(match.group('value'))
     match = layer_begin.match(gcode_line)
     if match is not None:
         retDict['Layer'] = gcode_line
     retDict['Line'] = str(line_num) + ": \t" + str(gcode_line)
+    
     return retDict
 
 #ugly global hack
