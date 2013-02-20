@@ -12,11 +12,11 @@ g1re = re.compile('^G1\s+(?P<param>(['+paramcodes+']-?\d+(\.\d*)?\s*)+)(?P<comme
 paramre = re.compile('(?P<code>['+paramcodes+'])(?P<value>-?\d+(\.\d*)?)')
 
 def formatParamDict(params, category = ''):
-    """Convert a dict into an xml-like format"""
+    '''Convert a dict into an xml-like format'''
     return reduce(lambda a,b: '%s %s=\"%s\"' % ((a,) + b), params.iteritems(), category)
     
 def writeSvg(output, elements):
-    """Write elements (an iterable) to output (a file-like thing)"""
+    '''Write elements (an iterable) to output (a file-like thing)'''
     output.write("<?xml version=\"1.0\" encoding=\"ISO-8859-1\" standalone=\"no\"?>\n")
     output.write("<svg xmlns=\"http://www.w3.org/2000/svg\" version=\"1.1\">\n")
     for element in elements:
@@ -25,7 +25,7 @@ def writeSvg(output, elements):
     output.write("</svg>\n")
 
 def decodeCommand(command):
-    """Decode a G1 command or layer change into a dict."""
+    '''Decode a G1 command or layer change into a dict.'''
     params = dict()
     params['line']=filter(lambda a: a!='\n',command)
     if layer_begin.match(command):
@@ -42,7 +42,7 @@ def decodeCommand(command):
     return params
 
 def encodeCommand(command):
-    """Reconstruct a decoded command."""
+    '''Reconstruct a decoded command.'''
     if 'G1' in command:
         foo = lambda a,b: ('%s%s')%(a,((' '+b+str(command[b])) if b in command else ''),)
         if 'old' in command:
@@ -56,7 +56,7 @@ def encodeCommand(command):
             return ''
 
 def interpretCommand(command):
-    """Get a style string from a preprocessed command."""
+    '''Get a style string from a preprocessed command.'''
     if 'G1' in command:
         for axis in 'ABE':
             if axis in command and axis in command['old']:
@@ -77,30 +77,30 @@ def interpretCommand(command):
         return None
     
 def parseCommands(commands):
-    """Get a list of decoded commands from the commands iterable"""
+    '''Get a list of decoded commands from the commands iterable'''
     sys.stdout.write('\nReading Commands\n')
     sys.stdout.flush()
     return [decodeCommand(command) for command in commands]
     
 def dropInitCommands(commands):
-    """
+    '''
         Drop all things before the first layer label in decoded commands.
         
         Returns a list containing only commands from the first layer label
-    """
+    '''
     for index in range(len(commands)):
         if 'layer' in commands[index]:
             return commands[index:]
     
 def offsetCommands(commands, offset = (0.0,0.0), scale=10.0):
-    """
+    '''
         Make all X,Y coordinates in commands positive plus offset.
         
         commands is an iterable of decoded commands.
         offset is a coordinate pair. All commands will be moved such that 
         no command is below offset.
         scale will increase the size of things
-    """
+    '''
     minimums = dict({'X':999.0, 'Y':999.0})
     maximums = dict({'X':-999.0, 'Y':-999.0})
     offset = dict({'X':offset[0], 'Y':offset[1]})
@@ -132,12 +132,12 @@ def offsetCommands(commands, offset = (0.0,0.0), scale=10.0):
                             command[axis]) * scale + offset[axis]
 
 def computeCurvature(commands):
-    """
+    '''
         Get a list of curvature-approximating circles from a list of 
         postprocessed movements.
         
         Circles are svg-ready dicts.
-    """
+    '''
     length = 0.0
     circles = []
     lastCommand = None
@@ -189,7 +189,7 @@ def computeCurvature(commands):
     return circles
 
 def preprocessCommands(commands):
-    """Add relative information to each command for use in drawing svgs"""
+    '''Add relative information to each command for use in drawing svgs'''
     oldCommand = dict()
     currentCommand = dict()
     sys.stdout.write('\nParsing Command Transitions\n')
@@ -207,7 +207,7 @@ def preprocessCommands(commands):
             #print encodeCommand(command)
 
 def postprocessCommands(commands):
-    """Convert preprocessed commands into a json-ready dict"""
+    '''Convert preprocessed commands into a json-ready dict'''
     layers = []
     movements = []
     
@@ -268,7 +268,7 @@ def parseArgs(argv):
     return parser.parse_args(argv)
 
 def commandToSvg(command):
-    """Convert a single processed movement to an svg line"""
+    '''Convert a single processed movement to an svg line'''
     if 'G1' in command and 'old' in command:
         #work on a preprocessed command
         relative = dict()
@@ -321,11 +321,11 @@ def commandToSvg(command):
     return None
     
 def monolithicPre(commands, out_dir):
-    """
+    '''
         Cause svg files to appear in out_dir/svg.
         
         Return a list of file names written
-    """
+    '''
     layer_num = 0
     layer_name = None
     oldCommands = []
