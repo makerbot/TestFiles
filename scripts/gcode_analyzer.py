@@ -55,13 +55,34 @@ def encodeCommand(command):
         except KeyError as ke:
             return ''
 
-def interpretCommand(command):
+def interpretCommand(command, md = None):
     '''Get a style string from a preprocessed command.'''
     def speedConvert(s):
-        s = (s / 5000.0) * 256.0 ** 2
-        c = [256.0 ** 2, 256.0, 256.0]
-        sc = [math.fmod(s, p) * 256.0/p for p in c]
-        ret = [int(sci) for sci in sc]
+        if None is md:
+            s = (s / 5000.0) * 256.0 ** 2
+            c = [256.0 ** 2, 256.0, 256.0]
+            sc = [math.fmod(s, p) * 256.0/p for p in c]
+            ret = [int(sci) for sci in sc]
+        else:
+            clamp = 3.0
+            split = 0.5
+            if md[1] != 0:
+                v = (s - md[0]) / md[1]
+            else:
+                v = 0.0
+            v = max(v, -clamp)
+            v = min(v, clamp)
+            v = (v + clamp) / (2.0 * clamp)
+            b = 0.0
+            if v < split:
+                a = v / split
+                a = math.sqrt(a)
+                c = b
+            else:
+                a = b
+                c = (v - split) / (1.0 - split)
+                c = math.sqrt(c)
+            ret = [int(255 * j) for j in (a,b,c)]
         #print s, sc
         return ret
     def paramConvert(sc):
@@ -202,6 +223,34 @@ def postprocessCommands(commands):
         outDict['layers'].append(curLayer)
     return outDict
     
+def distribution(values):
+    '''From list of numeric types get (mean, std deviation)'''
+    E = 0.0
+    E2 = 0.0
+    counter = 0
+    M = None
+    for value in values:
+        E += value
+        E2 += value ** 2
+        counter += 1
+        if None is M:
+            M = value
+        else:
+            M = max(M, value)
+    E /= counter
+    E2 /= counter
+    return (E, math.sqrt(E2 - E ** 2), M)
+    
+def processedDistribution(commands):
+    '''
+    From a list of processed commands, get (mean, std deviation)
+    '''
+    largest = max(c['speed'] for c in commands 
+            if c['volume'] != 0 and c['distance'] != 0)
+    return distribution(c['speed'] for c in commands 
+            if c['volume'] != 0 and c['distance'] != 0
+            and c['speed'] != largest)
+    
 
 def parseArgs(argv):
     parser=argparse.ArgumentParser(
@@ -223,7 +272,7 @@ def parseArgs(argv):
         default=None)
     return parser.parse_args(argv)
 
-def commandToSvg(command):
+def commandToSvg(command, arg = None):
     '''Convert a single processed movement to an svg line'''
     if 'G1' in command and 'old' in command:
         #work on a preprocessed command
@@ -237,7 +286,7 @@ def commandToSvg(command):
             lineparams['y1'] = command['old']['Y']
             lineparams['x2'] = command['X']
             lineparams['y2'] = command['Y']
-            lineparams['style'] = interpretCommand(command)
+            lineparams['style'] = interpretCommand(command, arg)
             return '<%s />' % (formatParamDict(lineparams, 'line'), )
         except KeyError as ke:
             pass
@@ -251,7 +300,7 @@ def commandToSvg(command):
                         'y1': command['from']['y'],
                         'x2': command['to']['x'],
                         'y2': command['to']['y'],
-                        'style': interpretCommand(command)
+                        'style': interpretCommand(command, arg)
                         })
                 return '<%s />' % (formatParamDict(lineparams, 'line'), )
             else:
@@ -315,7 +364,8 @@ def monolithicPost(commands, out_dir):
         ofilename = os.path.join(out_dir, 'svg', 'layer_%s.svg' % (layer_num))
         outFiles.append(ofilename)
         with open(ofilename, 'w') as ofile:
-            lines = [commandToSvg(c) for c in layer['movements']]
+            md = processedDistribution(layer['movements'])
+            lines = [commandToSvg(c, md) for c in layer['movements']]
             #circles = ['<%s />' % formatParamDict(c, 'circle')
             #        for c in computeCurvature(layer['movements'])]
 
