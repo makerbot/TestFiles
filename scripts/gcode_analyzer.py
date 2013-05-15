@@ -64,7 +64,7 @@ def interpretCommand(command, md = None):
             sc = [math.fmod(s, p) * 256.0/p for p in c]
             ret = [int(sci) for sci in sc]
         else:
-            clamp = 3.0
+            clamp = 2.0
             split = 0.5
             if md[1] != 0:
                 v = (s - md[0]) / md[1]
@@ -76,12 +76,12 @@ def interpretCommand(command, md = None):
             b = 0.0
             if v < split:
                 a = v / split
-                a = math.sqrt(a)
+                #a = math.sqrt(a)
                 c = b
             else:
                 a = b
                 c = (v - split) / (1.0 - split)
-                c = math.sqrt(c)
+                #c = math.sqrt(c)
             ret = [int(255 * j) for j in (a,b,c)]
         #print s, sc
         return ret
@@ -224,11 +224,12 @@ def postprocessCommands(commands):
     return outDict
     
 def distribution(values):
-    '''From list of numeric types get (mean, std deviation)'''
+    '''From list of numeric types get (mean, std deviation, min, max)'''
     E = 0.0
     E2 = 0.0
     counter = 0
     M = None
+    m = None
     for value in values:
         E += value
         E2 += value ** 2
@@ -237,9 +238,13 @@ def distribution(values):
             M = value
         else:
             M = max(M, value)
+        if None is m:
+            m = value
+        else:
+            m = min(m, value)
     E /= counter
     E2 /= counter
-    return (E, math.sqrt(E2 - E ** 2), M)
+    return (E, math.sqrt(E2 - E ** 2), m, M)
     
 def processedDistribution(commands):
     '''
@@ -248,8 +253,7 @@ def processedDistribution(commands):
     largest = max(c['speed'] for c in commands 
             if c['volume'] != 0 and c['distance'] != 0)
     return distribution(c['speed'] for c in commands 
-            if c['volume'] != 0 and c['distance'] != 0
-            and c['speed'] != largest)
+            if c['volume'] != 0 and c['distance'] != 0)
     
 
 def parseArgs(argv):
