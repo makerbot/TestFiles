@@ -1,0 +1,4 @@
+Index of files, describing the problems they cause - for example, non-manifold, overlapping faces, etc.
+
+ballista_base.stl - Overlapping faces causing missing roofs in 2.2, fixed with a hack for 2.2.2
+
