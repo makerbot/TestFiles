@@ -55,8 +55,41 @@ def encodeCommand(command):
         except KeyError as ke:
             return ''
 
-def interpretCommand(command):
+def interpretCommand(command, md = None):
     '''Get a style string from a preprocessed command.'''
+    def speedConvert(s):
+        if None is md:
+            s = (s / 5000.0) * 256.0 ** 2
+            c = [256.0 ** 2, 256.0, 256.0]
+            sc = [math.fmod(s, p) * 256.0/p for p in c]
+            ret = [int(sci) for sci in sc]
+        else:
+            clamp = 2.0
+            split = 0.5
+            if md[1] != 0:
+                v = (s - md[0]) / md[1]
+            else:
+                v = 0.0
+            v = max(v, -clamp)
+            v = min(v, clamp)
+            v = (v + clamp) / (2.0 * clamp)
+            b = 0.0
+            if v < split:
+                a = v / split
+                #a = math.sqrt(a)
+                c = b
+            else:
+                a = b
+                c = (v - split) / (1.0 - split)
+                #c = math.sqrt(c)
+            ret = [int(255 * j) for j in (a,b,c)]
+        #print s, sc
+        return ret
+    def paramConvert(sc):
+        return (sc[0], sc[1], sc[2], 2.0)
+        
+    speedParam = lambda s: paramConvert(speedConvert(s))
+    
     if 'G1' in command:
         for axis in 'ABE':
             if axis in command and axis in command['old']:
@@ -65,13 +98,14 @@ def interpretCommand(command):
         if volume == 0:   #travel move
             params = (0,255,0,1)
         else:
-            speed = int(256*command['F']/4800.0)
-            params=(speed, 64, speed, 2.0)
+            params = speedParam(command['F'])
         return 'stroke:rgb(%s,%s,%s);stroke-width:%s' % params
     elif 'type' in command and command['type'] == 'movement':
         volume = command['volume']
-        speed = int(256*command['speed']/4800.0)
-        params=(speed, 64, speed, 2.0)
+        if volume == 0:   #travel move
+            params = params = (0,255,0,1)
+        else:
+            params = speedParam(command['speed'])
         return 'stroke:rgb(%s,%s,%s);stroke-width:%s' % params
     else:
         return None
@@ -131,63 +165,6 @@ def offsetCommands(commands, offset = (0.0,0.0), scale=10.0):
                     command[axis] = (maximums[axis] - 
                             command[axis]) * scale + offset[axis]
 
-def computeCurvature(commands):
-    '''
-        Get a list of curvature-approximating circles from a list of 
-        postprocessed movements.
-        
-        Circles are svg-ready dicts.
-    '''
-    length = 0.0
-    circles = []
-    lastCommand = None
-    for command in commands:
-        if None is not lastCommand:
-            print command['distance'], lastCommand['distance']
-            if lastCommand['distance'] == 0 or \
-                    command['distance'] == 0:
-                print 'PHALE'
-                continue
-            #distance of the nearest midpoint to the axis
-            offsetDistance = min([c['distance']/2.0 
-                    for c in (lastCommand, command)])
-            #unit vectors
-            (lastUnit, unit) = [dict([(a, c['to'][a] - c['from'][a]/c['distance'])
-                    for a in 'xy'])
-                    for c in (lastCommand, command)]
-            #origin points offset from vertex by offsetDistance
-            lastOrig = dict([(a, lastCommand['from'][a] + 
-                    lastUnit[a] * offsetDistance) for a in 'xy'])
-            orig = dict([(a, command['from'][a] + 
-                    unit[a] * offsetDistance) for a in 'xy'])
-            #perpedicular normals
-            (lastNormal, normal) = [dict({'x':-u['y'], 'y':u['x']}) 
-                    for u in (lastUnit, unit)]
-            #endpoints of perpendicular lines
-            (lastOffset, offset) = [dict([(a, lastOrig[a] + lastNormal[a]) 
-                    for a in 'xy']) 
-                    for (o,n) in ((lastOrig, lastNormal), (orig, normal))]
-            (x1, y1, x2, y2, x3, y3, x4, y4) = \
-                    [o[a] for o in (lastOrig, lastOffset, orig, offset) 
-                    for a in 'xy']
-            denom = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4)
-            numx = (x1 * y2 - y1 * x2) * (x3 - x4) - \
-                    (x1 - x2) * (x3 * y4 - y3 * x4)
-            numy = (x1 * y2 - y1 * x2) * (y3 - y4) - \
-                    (y1 - y2) * (x3 * y4 - y3 * x4)
-            if denom != 0.0:
-                (x,y) = [n/denom for n in (numx, numy)]
-                r = math.sqrt((x-x1)**2 + (y-y1)**2)
-                if r < 20:
-                    circles.append(dict({'cx': x, 'cy': y, 'r': r, 
-                            'fill': 'none', 
-                            'stroke': 'black', 
-                            'stroke-width': '1.0'}))
-            else:
-                print denom
-        lastCommand = command
-    return circles
-
 def preprocessCommands(commands):
     '''Add relative information to each command for use in drawing svgs'''
     oldCommand = dict()
@@ -246,6 +223,38 @@ def postprocessCommands(commands):
         outDict['layers'].append(curLayer)
     return outDict
     
+def distribution(values):
+    '''From list of numeric types get (mean, std deviation, min, max)'''
+    E = 0.0
+    E2 = 0.0
+    counter = 0
+    M = None
+    m = None
+    for value in values:
+        E += value
+        E2 += value ** 2
+        counter += 1
+        if None is M:
+            M = value
+        else:
+            M = max(M, value)
+        if None is m:
+            m = value
+        else:
+            m = min(m, value)
+    E /= counter
+    E2 /= counter
+    return (E, math.sqrt(E2 - E ** 2), m, M)
+    
+def processedDistribution(commands):
+    '''
+    From a list of processed commands, get (mean, std deviation)
+    '''
+    largest = max(c['speed'] for c in commands 
+            if c['volume'] != 0 and c['distance'] != 0)
+    return distribution(c['speed'] for c in commands 
+            if c['volume'] != 0 and c['distance'] != 0)
+    
 
 def parseArgs(argv):
     parser=argparse.ArgumentParser(
@@ -267,7 +276,7 @@ def parseArgs(argv):
         default=None)
     return parser.parse_args(argv)
 
-def commandToSvg(command):
+def commandToSvg(command, arg = None):
     '''Convert a single processed movement to an svg line'''
     if 'G1' in command and 'old' in command:
         #work on a preprocessed command
@@ -281,7 +290,7 @@ def commandToSvg(command):
             lineparams['y1'] = command['old']['Y']
             lineparams['x2'] = command['X']
             lineparams['y2'] = command['Y']
-            lineparams['style'] = interpretCommand(command)
+            lineparams['style'] = interpretCommand(command, arg)
             return '<%s />' % (formatParamDict(lineparams, 'line'), )
         except KeyError as ke:
             pass
@@ -295,7 +304,7 @@ def commandToSvg(command):
                         'y1': command['from']['y'],
                         'x2': command['to']['x'],
                         'y2': command['to']['y'],
-                        'style': interpretCommand(command)
+                        'style': interpretCommand(command, arg)
                         })
                 return '<%s />' % (formatParamDict(lineparams, 'line'), )
             else:
@@ -359,7 +368,8 @@ def monolithicPost(commands, out_dir):
         ofilename = os.path.join(out_dir, 'svg', 'layer_%s.svg' % (layer_num))
         outFiles.append(ofilename)
         with open(ofilename, 'w') as ofile:
-            lines = [commandToSvg(c) for c in layer['movements']]
+            md = processedDistribution(layer['movements'])
+            lines = [commandToSvg(c, md) for c in layer['movements']]
             #circles = ['<%s />' % formatParamDict(c, 'circle')
             #        for c in computeCurvature(layer['movements'])]
 
