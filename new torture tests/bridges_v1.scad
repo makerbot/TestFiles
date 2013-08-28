@@ -209,11 +209,11 @@ difference(){
 		translate([1.5*baseLength, 1.5*baseLength,0]) singleAnchor(d1);
 		translate([d1+outset-d2,d1+outset,0]) SAnchor(d2,.75*d1);
 		translate([0, baseLength,0]) chair(baseLength,.5*baseLength, width);
+		translate([0, baseLength+.5*baseLength-10, 0]) cube([10,10,thickness]);
 		translate([baseLength+2*outset,baseLength+outset,0]) oneToMany(d2, width, spacing);
 		translate([baseLength+2*outset,baseLength+outset,height]) oneToOne(d2, width, spacing);
 		translate([baseLength+2*outset,baseLength+outset,2*height]) manyToMany(d2, width, spacing);
 		translate([baseLength+.5*outset,baseLength-outset,0]) wedge(d2+7,10,15);
-
 	}
 	//change these eventually
 	translate([-baseLength,-.01,-50]) cube([4*baseLength, outset, 100]);
