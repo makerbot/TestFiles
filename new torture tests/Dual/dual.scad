@@ -1,10 +1,11 @@
-
 //DUALLLLLL
+$fn = 50;
 
-spacing = .000001;
+spacing = .0001;
 support_angle = 68;
 shell_thickness = .4;
 layer_thickness = .2;
+//add cube offset factor here
 
 module alternating_row(num, width, height, odd){
 	for(col = [0:num-1]){
@@ -177,50 +178,227 @@ module alternating_center_bridge(num_layers, length, width, height, bridge_thick
 	}
 }
 
-module star_point(radius){
+module star_point(radius, height){
 	angle = 360/10;
-	linear_extrude(height = layer_thickness)
-	polygon([[0, 0], [.5*radius * tan(angle), .5*radius], [0, radius], [-.5*radius * tan(angle), .5*radius]]);
+	linear_extrude(height = height)
+	polygon([[0, 0], [.4*radius * tan(angle), .4*radius], [0, radius], [-.4*radius * tan(angle), .4*radius]]);
 }
 
-module star(radius){
+module star(radius, height){
 	angle = 360/5;
 	union(){
 		for(i = [0:5]){
 			rotate([0, 0, i*angle])
-			star_point(radius);
+			translate([0, -.0001, 0])
+			star_point(radius, height);
 		}
 	}
 }
 
-module cube_top_bottom_face(size){
+module dots(size, height){
+	num = size/shell_thickness;
+	for(i = [0:num-1]){
+		if((i % 4) == 0){
+			translate([0, i * shell_thickness, 0])
+			for(j = [0:num-1]){
+				if((j % 4) == 0){
+					translate([j * shell_thickness, 0, 0])
+					cube([shell_thickness, shell_thickness, height]);
+				}
+			}
+		}
+	}
+}
+
+module cube_face_1(size, height){
 	offset = .1 * size;
 	assign(size = size - 2*offset)
 
 	translate([offset, offset, 0]){
 		difference(){
-			cube([.5 * size, .4 * size, layer_thickness]);
+			cube([.45 * size, .45 * size, height]);
 			translate([shell_thickness, shell_thickness, 0])
-			cube([.5*size - 2*shell_thickness, .4*size - 2*shell_thickness, layer_thickness]);
+			cube([.45*size - 2*shell_thickness, .45*size - 2*shell_thickness, height]);
 		}
-	
-		translate([.5*size + offset, 0, 0])
+		dots(.45*size, height);
+
+		translate([.45*size + offset, 0, 0])
 		difference(){
-			cube([.4*size, .4*size, layer_thickness]);
-			translate([.5*radius, .5*radius, 0]) star(.2*size);
+			cube([.45*size, .45*size, height]);
+			translate([.225*size, .215*size, 0]) star(.2*size);
+		}
+
+		translate([0, .45*size + offset, 0])
+		cube([.45*size, .45*size, height]);
+
+		translate([(.225+.45)*size + offset, (.225+.45)*size + offset, 0])
+		star(.225 * size, height);
+	}
+}
+
+module cube_face_2(size, depth){
+	offset = .1 * size;
+	translate([.5 * size, .5 * size, 0])
+	assign(size = size - 2*offset){
+		translate([0, 0, .5*depth]) 
+		union(){
+			rotate([0, 0, 45]) cube([size, shell_thickness, depth], center=true);
+			rotate([0, 0, -45]) cube([size, shell_thickness, depth], center=true);
 		}
 	}
 }
 
-/*
-module cube(size, piece){
-	if(piece == 0){
-		cube(size);
+module cube_face_domes(size){
+	offset = .1 * size;
+	radius = .175 * size;
+	translate([radius, 0, radius])
+	scale([1, .5, 1])
+	for(i = [0:1])
+	{	translate([0, 0, i*(2*radius + offset)])
+		for(j = [0:1])
+		{
+			translate([j*(2*radius + offset), 0, 0]) sphere(radius);
+		}
+	}
+}
+
+module cube_face_3(size, piece){
+	offset = .1 * size;
+	translate([offset, 0, offset])
+	if(piece == 1){
+		union(){
+			difference(){
+				cube_face_domes(size);
+				translate([.175*size, 0, .175*size]) cube(2*.1*size, center=true);
+				translate([3*.175*size + offset, 0, .175*size]) cube(2*.1*size, center=true);
+				translate([.175*size, 0, 3*.175*size + offset]) sphere(.7*.175*size);
+			}
+			intersection(){
+				cube_face_domes(size);
+				translate([3*.175*size + offset, 0, .175*size]) cube(2*.1*size - 2*shell_thickness, center=true);
+			}
+		}
+	}
+
+	else{
+		intersection(){
+			cube_face_domes(size);
+			union(){
+				translate([.175*size, 0, .175*size]) cube(2*.1*size, center=true);
+				difference(){
+					translate([3*.175*size + offset, 0, .175*size]) cube(2*.1*size, center=true);
+					translate([3*.175*size + offset, 0, .175*size]) cube(2*.1*size - 2*shell_thickness, center=true);
+				}
+			}
+		}
+		translate([.175*size, 0, 3*.175*size + offset]) sphere(.7*.175*size);
+	}
+}
+
+module cube_face_cylinders(size){
+	offset = .1 * size;
+	radius = .175 * size;
+	translate([radius, 0, radius])
+	for(i = [0:1])
+	{	translate([0, 0, i*(2*radius + offset)])
+		for(j = [0:1])
+		{
+			translate([j*(2*radius + offset), 0, 0])
+			rotate([-90, 0, 0]) 
+			cylinder(.5*radius, radius, radius);
+		}
+	}
+}
+
+module cube_face_4(size, piece){
+	offset = .1 * size;
+	radius = .175 * size;
+	translate([offset, 0, offset])
+	if(piece == 1){
+		difference(){
+			difference(){
+				cube_face_cylinders(size);
+				translate([.175*size, 0, .175*size]) cube(2*.1*size, center=true);
+				translate([.175*size, .5*.7*.175*size, 3*.175*size + offset]) scale([1, .5, 1]) sphere(.7*.175*size);
+				difference(){
+					translate([3*.175*size + offset, 0, .175*size]) cube(2*.1*size, center=true);
+					translate([3*.175*size + offset, 0, .175*size]) cube(2*.1*size - 2*shell_thickness, center=true);
+				}
+			}
+			cube_face_domes(size);
+		}
 	}
 	else{
-		
+		difference(){
+			union(){
+				difference(){
+					translate([0, .1*size, 0])
+					union(){
+						translate([.175*size, 0, .175*size]) cube(2*.1*size, center=true);
+						difference(){
+							translate([3*.175*size + offset, 0, .175*size]) cube(2*.1*size, center=true);
+							translate([3*.175*size + offset, 0, .175*size]) cube(2*.1*size - 2*shell_thickness, center=true);
+						}
+					}
+					cube_face_domes(size);
+				}
+				translate([.175*size, .5*.7*.175*size, 3*.175*size + offset]) scale([1, .5, 1]) sphere(.7*.175*size);
+			}
+		translate([0, .5*.175 * size, 0]) cube(size);
+		}
 	}
-}*/
+}
+
+
+module block(size, piece){
+	offset = .1 * size;
+	if(piece == 0){
+		union(){	
+			difference(){
+				cube(size);
+				//bottom
+				cube_face_1(size, layer_thickness);
+				//top
+				translate([0,0,size-layer_thickness+spacing]) cube_face_1(size, layer_thickness);
+				//front
+				translate([0, shell_thickness-spacing, 0]) rotate([90, 0, 0]) cube_face_2(size, shell_thickness);
+				//back
+				translate([0, size + spacing, 0]) rotate([90, 0, 0]) cube_face_1(size, shell_thickness);
+				translate([0, offset, offset]) rotate([0, 0, 90]) cube_face_domes(size);
+				translate([size+spacing, offset, offset]) rotate([0, 0, 90]) cube_face_cylinders(size);		
+			}
+			//left
+			rotate([0, 0, 90]) cube_face_3(size, 0);
+			//right
+			translate([size, 0, 0]) rotate([0, 0, 90]) cube_face_4(size, 0);
+		}
+	}
+	else{
+		//bottom
+		cube_face_1(size, layer_thickness);
+		//top
+		translate([0,0,size-layer_thickness+spacing]) cube_face_1(size, layer_thickness);
+		//front
+		translate([0, shell_thickness-spacing, 0]) rotate([90, 0, 0]) cube_face_2(size, shell_thickness);
+		//back
+		translate([0, size + spacing, 0]) rotate([90, 0, 0]) cube_face_1(size, shell_thickness);	
+		//left
+		rotate([0, 0, 90]) cube_face_3(size, 1);
+		//right
+		translate([size, 0, 0]) rotate([0, 0, 90]) cube_face_4(size, 1);	
+	}
+}
+
+module alternating_dome(num_layers, radius, height, odd){
+	scale([1, 1, height/radius])
+	intersection(){
+		difference(){
+			sphere(radius);
+			translate([0, 0, -radius]) cube(2*radius, center=true);
+		}
+		translate([-radius, -radius, 0]) alternating_block(1, 1, num_layers, 2*radius, radius/num_layers, odd);
+	}
+}
 
 //alternating_block(5, 5, 10, 10, 5, 1);
 
@@ -246,4 +424,13 @@ module cube(size, piece){
 //alternating_center_bridge(3, 20, 10, 10, 2, 3, 0);
 //#alternating_center_bridge(3, 20, 10, 10, 2, 3, 1);
 
-cube_top_bottom_face(50);
+//cube_face_1(50, 20);
+//cube_face_3(50, 0);
+//cube_face_3(50, 1);
+//cube_face_4(50, 0);
+//cube_face_4(50, 1);
+
+//block(50, 0);
+//block(50, 1);
+
+alternating_dome(5, 50, 20, 1);
