@@ -57,7 +57,7 @@ module alternating_scaled_layers(num_layers, width, height, scale, odd){
 }
 
 module alternating_concentric_circles(num_rings, thickness, height, odd){
-	for(ring = [0:num_rings-2]){
+	for(ring = [0:num_rings-1]){
 		if((ring % 2) == odd){
 			difference(){
 				cylinder(height, (ring+1) * thickness, (ring+1) * thickness);
@@ -127,7 +127,7 @@ module alternating_supports_block(radius, height, odd){
 		assign(radius = (radius + height*tan(support_angle - 1)) + height*tan(support_angle + 1))
 		translate([-radius, -radius, -spacing * height]) 
 		scale([1, 1, 1 + spacing])
-		%alternating_block(2, 2, 2, radius, height, odd);
+		alternating_block(2, 2, 2, radius, height, odd);
 		
 	}
 }
@@ -146,7 +146,7 @@ module top_bridge(length, width, height, bridge_thickness, anchor_thickness, pie
 
 module alternating_top_bridge(num_layers, length, width, height, bridge_thickness, anchor_thickness, piece){
 	for(layer = [0:num_layers-1]){
-		translate([width * layer, 0, 0])
+		translate([layer * (width + spacing), 0, 0])
 		if((layer % 2) == piece){
 			top_bridge(length, width, height, bridge_thickness, anchor_thickness, 1);
 		}
@@ -162,13 +162,14 @@ module center_bridge(length, width, height, bridge_thickness, anchor_thickness, 
 		translate([0, length - anchor_thickness, 0]) cube([width, anchor_thickness, height]);
 	}
 	else{
-		translate([0, anchor_thickness, height - bridge_thickness + spacing]) cube([width, length - 2* anchor_thickness, bridge_thickness]);
+		translate([0, anchor_thickness, height - bridge_thickness]) 
+		cube([width, length - 2*anchor_thickness, bridge_thickness]);
 	}
 }
 
 module alternating_center_bridge(num_layers, length, width, height, bridge_thickness, anchor_thickness, piece){
 	for(layer = [0:num_layers-1]){
-		translate([width * layer, 0, 0])
+		translate([layer * (width + spacing), 0, 0])
 		if((layer % 2) == piece){
 			center_bridge(length, width, height, bridge_thickness, anchor_thickness, 1);
 		}
@@ -430,7 +431,31 @@ module alternating_dome(num_layers, radius, height, odd){
 //cube_face_4(50, 0);
 //cube_face_4(50, 1);
 
-//block(50, 0);
+block(50, 0);
 //block(50, 1);
 
-alternating_dome(5, 50, 20, 1);
+//alternating_dome(5, 50, 20, 1);
+
+//block
+//alternating_block(3, 3, 3, 10, 10, 0);
+//alternating_block(3, 3, 3, 10, 10, 1);
+
+//pillars
+//alternating_pillar_block(3, 3, 3, 2.5, 5, 10, 0);
+//alternating_pillar_block(3, 3, 3, 2.5, 5, 10, 1);
+
+//circles
+//stacked_alternating_circles(4, 4, 3, 3, 0);
+//stacked_alternating_circles(4, 4, 3, 3, 1);
+
+//center bridge
+//alternating_center_bridge(3, 40, 10, 5, 3, 3, 0);
+//alternating_center_bridge(3, 40, 10, 5, 3, 3, 1);
+
+//top bridge
+//alternating_top_bridge(3, 40, 10, 5, 3, 3, 0);
+//alternating_top_bridge(3, 40, 10, 5, 3, 3, 1);
+
+//supports
+//alternating_supports_block(15, 10, 0);
+//alternating_supports_block(15, 10, 1);
